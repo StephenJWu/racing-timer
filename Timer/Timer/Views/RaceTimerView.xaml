@@ -1,0 +1,22 @@
+<UserControl x:Class="Timer.Views.RaceTimerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1e1e1e">
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding Title}" 
+                       FontSize="32" 
+                       FontWeight="Bold" 
+                       FontStyle="Italic"
+                       HorizontalAlignment="Center"
+                       Foreground="#e2e8f0"
+                       Margin="0,0,0,16"/>
+            <TextBlock Text="{Binding Message}" 
+                       FontSize="14" 
+                       Foreground="#64748b"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
+
