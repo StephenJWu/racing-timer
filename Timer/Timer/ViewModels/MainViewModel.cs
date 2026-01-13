@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Timer.Data;
 using Timer.Models;
 using Timer.Services;
 using Timer.ViewModels;
@@ -14,6 +15,7 @@ namespace Timer.ViewModels
     public class MainViewModel : ObservableObject, IDisposable
     {
         private readonly INavigationService _navigationService;
+        private readonly DatabaseContext _dbContext;
         private NavigationItem? _selectedMenuItem;
         private object? _currentView;
         private bool _disposed;
@@ -22,10 +24,12 @@ namespace Timer.ViewModels
         /// 初始化MainViewModel实例
         /// </summary>
         /// <param name="navigationService">导航服务实例</param>
+        /// <param name="dbContext">数据库上下文实例</param>
         /// <exception cref="ArgumentNullException">当navigationService为null时抛出</exception>
-        public MainViewModel(INavigationService navigationService)
+        public MainViewModel(INavigationService navigationService, DatabaseContext dbContext)
         {
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             MenuItems = new ObservableCollection<NavigationItem>();
             NavigateCommand = new RelayCommand<NavigationItem>(NavigateTo);
             ToggleExpandCommand = new RelayCommand<NavigationItem>(ToggleExpand);
@@ -77,7 +81,7 @@ namespace Timer.ViewModels
             var participantItem = new NavigationItem
             {
                 Title = "参赛人员",
-                ViewModel = new ParticipantViewModel()
+                ViewModel = CreateParticipantViewModel()
             };
             participantItem.Command = NavigateCommand;
 
@@ -185,6 +189,16 @@ namespace Timer.ViewModels
                 return;
 
             item.IsExpanded = !item.IsExpanded;
+        }
+
+        /// <summary>
+        /// 创建ParticipantViewModel实例（带依赖注入）
+        /// </summary>
+        private ParticipantViewModel CreateParticipantViewModel()
+        {
+            var repository = new ParticipantRepository(_dbContext);
+            var excelImportService = new ExcelImportService(repository);
+            return new ParticipantViewModel(repository, excelImportService, _dbContext);
         }
 
         /// <summary>

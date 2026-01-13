@@ -19,7 +19,8 @@ namespace Timer
             InitializeComponent();
             
             var navigationService = new NavigationService();
-            _viewModel = new MainViewModel(navigationService);
+            var dbContext = App.GetDatabaseContext();
+            _viewModel = new MainViewModel(navigationService, dbContext);
             DataContext = _viewModel;
         }
 

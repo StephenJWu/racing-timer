@@ -5,7 +5,7 @@
         Title="比赛计时系统" Height="700" Width="1200"
         MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="#1e1e1e">
+        Background="{StaticResource BackgroundBrush}">
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Window.Resources>
@@ -16,7 +16,10 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left Navigation Menu Area -->
-        <Border Grid.Column="0" Background="#252526" BorderBrush="#3e3e3e" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" 
+                Background="{StaticResource CardBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderColorBrush}" 
+                BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -24,12 +27,27 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Menu Header -->
-                <Border Grid.Row="0" Background="#2d2d2d" BorderBrush="#3e3e3e" BorderThickness="0,0,0,1" Padding="16,12">
+                <Border Grid.Row="0" 
+                        Background="{StaticResource CardBackgroundBrush}" 
+                        BorderBrush="{StaticResource BorderColorBrush}" 
+                        BorderThickness="0,0,0,1" 
+                        Padding="16,12">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="20" Height="20" Background="#ea580c" CornerRadius="3" Margin="0,0,8,0">
-                            <TextBlock Text="⚡" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                        <Border Width="20" Height="20" 
+                                Background="{StaticResource PrimaryColorBrush}" 
+                                CornerRadius="3" 
+                                Margin="0,0,8,0">
+                            <TextBlock Text="⚡" 
+                                       FontSize="12" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center" 
+                                       Foreground="White"/>
                         </Border>
-                        <TextBlock Text="TIMER" FontSize="11" FontWeight="Bold" Foreground="#ea580c" VerticalAlignment="Center"/>
+                        <TextBlock Text="TIMER" 
+                                   FontSize="11" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource PrimaryColorBrush}" 
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
@@ -42,16 +60,17 @@
                                     <!-- Menu Item -->
                                     <Border Padding="12,10" 
                                             BorderThickness="0,0,3,0"
-                                            BorderBrush="#ea580c">
+                                            BorderBrush="Transparent">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background" Value="#2d2d2d"/>
+                                                        <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryColorBrush}"/>
                                                     </DataTrigger>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#2d2d2d"/>
+                                                        <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
                                                     </Trigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -65,13 +84,13 @@
                                                        VerticalAlignment="Center"
                                                        FontSize="12"
                                                        FontWeight="Bold"
-                                                       Foreground="#e2e8f0">
+                                                       Foreground="{StaticResource TextColorBrush}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#e2e8f0"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Foreground" Value="#ea580c"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryColorBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -81,7 +100,7 @@
                                                        VerticalAlignment="Center"
                                                        FontFamily="Segoe UI Symbol"
                                                        FontSize="9"
-                                                       Foreground="#64748b"
+                                                       Foreground="{StaticResource SecondaryTextColorBrush}"
                                                        Margin="8,0,0,0"
                                                        Visibility="{Binding HasChildren, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <TextBlock.Style>
@@ -111,16 +130,17 @@
                                             <DataTemplate>
                                                 <Border Padding="12,8" 
                                                         BorderThickness="0,0,3,0"
-                                                        BorderBrush="#ea580c">
+                                                        BorderBrush="Transparent">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="Transparent"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                    <Setter Property="Background" Value="#2d2d2d"/>
+                                                                    <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColorBrush}"/>
                                                                 </DataTrigger>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#2d2d2d"/>
+                                                                    <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
                                                                 </Trigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -129,13 +149,13 @@
                                                         <TextBlock Text="{Binding Title}" 
                                                                    VerticalAlignment="Center"
                                                                    FontSize="11"
-                                                                   Foreground="#94a3b8">
+                                                                   Foreground="{StaticResource SecondaryTextColorBrush}">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="#94a3b8"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                            <Setter Property="Foreground" Value="#ea580c"/>
+                                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryColorBrush}"/>
                                                                             <Setter Property="FontWeight" Value="Bold"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
@@ -161,7 +181,8 @@
         </Border>
 
         <!-- Right Content Area -->
-        <ContentControl Grid.Column="1" Content="{Binding CurrentView}" Background="#1e1e1e"/>
+        <ContentControl Grid.Column="1" 
+                        Content="{Binding CurrentView}" 
+                        Background="{StaticResource BackgroundBrush}"/>
     </Grid>
 </Window>
-
