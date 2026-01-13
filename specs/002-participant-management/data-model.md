@@ -13,45 +13,63 @@
 **Properties**:
 - `Id` (int, Primary Key, Auto Increment): 数据库主键
 - `SequenceNumber` (int, Required, Unique): 序号，必须从1开始连续
+- `Date` (DateTime, Required): 日期（比赛日期）
+- `School` (string, Optional): 学校
+- `Grade` (string, Optional): 年级
+- `Class` (string, Optional): 班级
 - `Name` (string, Required): 姓名
 - `Gender` (string, Required): 性别（"男"或"女"）
-- `DateOfBirth` (DateTime, Required): 出生日期
-- `IdNumber` (string, Required, Unique): 身份证号，唯一标识
-- `BibNumber` (string, Required, Unique): 号码布编号，唯一标识
-- `Group` (string, Optional): 组别
+- `ExamNumber` (string, Optional, Unique): 准考证号，唯一标识（如果提供）
+- `GroupName` (string, Optional): 组别名称
+- `BibNumber` (string, Optional): 号码布编号（可选，后续分配）
 - `ChipNumber` (string, Optional): 芯片编号（可选，后续分配）
 - `CreatedAt` (DateTime): 创建时间
 - `UpdatedAt` (DateTime): 更新时间
+
+**Excel Column Mapping**:
+- 序号 → SequenceNumber
+- 日期 → Date
+- 学校 → School
+- 年级 → Grade
+- 班级 → Class
+- 姓名 → Name
+- 性别 → Gender
+- 准考证号 → ExamNumber
+- 组别名称 → GroupName
 
 **Database Schema**:
 ```sql
 CREATE TABLE Participants (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     SequenceNumber INTEGER NOT NULL UNIQUE,
+    Date TEXT NOT NULL,  -- SQLite存储为TEXT，格式YYYY-MM-DD或YYYY-MM-DD上午/下午
+    School TEXT,
+    Grade TEXT,
+    Class TEXT,
     Name TEXT NOT NULL,
     Gender TEXT NOT NULL CHECK(Gender IN ('男', '女')),
-    DateOfBirth TEXT NOT NULL,  -- SQLite存储为TEXT，格式YYYY-MM-DD
-    IdNumber TEXT NOT NULL UNIQUE,
-    BibNumber TEXT NOT NULL UNIQUE,
-    Group TEXT,
-    ChipNumber TEXT,
+    ExamNumber TEXT UNIQUE,  -- 准考证号，可选但唯一
+    GroupName TEXT,
+    BibNumber TEXT,  -- 号码布编号，后续分配
+    ChipNumber TEXT,  -- 芯片编号，后续分配
     CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_participants_name ON Participants(Name);
-CREATE INDEX idx_participants_bib ON Participants(BibNumber);
-CREATE INDEX idx_participants_group ON Participants(Group);
+CREATE INDEX idx_participants_exam_number ON Participants(ExamNumber);
+CREATE INDEX idx_participants_group_name ON Participants(GroupName);
+CREATE INDEX idx_participants_school ON Participants(School);
 ```
 
 **Validation Rules**:
 - SequenceNumber: 必须从1开始，连续无间隔
+- Date: 必须符合日期格式（支持YYYY-M-D、YYYY-MM-DD、YYYY-M-D上午、YYYY-MM-DD上午、YYYY-M-D下午、YYYY-MM-DD下午等变体）
 - Name: 不能为空，长度1-50字符
 - Gender: 必须是"男"或"女"
-- DateOfBirth: 必须符合三种格式之一：YYYY-MM-DD、YYYY-MM-DD上午、YYYY-MM-DD下午
-- IdNumber: 不能为空，唯一性约束
-- BibNumber: 不能为空，唯一性约束
-- Group: 可选，如果提供则长度1-50字符
+- ExamNumber: 可选，如果提供则必须唯一
+- GroupName: 可选，如果提供则长度1-50字符
+- School, Grade, Class: 可选字段
 
 **State Transitions**:
 - 初始状态: 创建时设置CreatedAt和UpdatedAt为当前时间
@@ -99,9 +117,10 @@ CREATE INDEX idx_participants_group ON Participants(Group);
 **Purpose**: 表示搜索和筛选条件
 
 **Properties**:
-- `SearchKeyword` (string, Optional): 搜索关键词（匹配姓名、号码布、身份证号）
-- `Group` (string, Optional): 组别筛选
+- `SearchKeyword` (string, Optional): 搜索关键词（匹配姓名、准考证号、号码布）
+- `GroupName` (string, Optional): 组别名称筛选
 - `Gender` (string, Optional): 性别筛选
+- `School` (string, Optional): 学校筛选
 - `PageNumber` (int, Default: 1): 页码（从1开始）
 - `PageSize` (int, Default: 20): 每页记录数
 
@@ -157,7 +176,7 @@ CREATE INDEX idx_participants_group ON Participants(Group);
 - `Task UpdateAsync(Participant participant)`: 更新人员
 - `Task DeleteAsync(int id)`: 删除人员
 - `Task DeleteBatchAsync(IEnumerable<int> ids)`: 批量删除
-- `Task<bool> ExistsByIdNumberAsync(string idNumber)`: 检查身份证号是否存在
+- `Task<bool> ExistsByExamNumberAsync(string examNumber)`: 检查准考证号是否存在
 - `Task<bool> ExistsByBibNumberAsync(string bibNumber)`: 检查号码布是否存在
 - `Task<int> GetMaxSequenceNumberAsync()`: 获取最大序号
 - `Task BeginTransactionAsync()`: 开始事务
@@ -181,7 +200,7 @@ CREATE INDEX idx_participants_group ON Participants(Group);
 - `static ValidationResult ValidateRequiredFields(Participant participant)`: 校验必填字段
 - `static ValidationResult ValidateDateFormat(string dateString)`: 校验日期格式
 - `static ValidationResult ValidateSequenceNumber(int sequenceNumber, int maxSequence)`: 校验序号连续性
-- `static ValidationResult ValidateUniqueness(Participant participant, IParticipantRepository repository)`: 校验唯一性（异步）
+- `static ValidationResult ValidateUniqueness(Participant participant, IParticipantRepository repository)`: 校验唯一性（异步，检查准考证号）
 
 ## Data Flow
 

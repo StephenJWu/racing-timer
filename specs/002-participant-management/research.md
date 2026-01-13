@@ -81,17 +81,21 @@
 
 ### 5. 日期格式处理
 
-**Decision**: 自定义日期解析器，支持三种格式
+**Decision**: 自定义日期解析器，支持多种日期格式变体
 
 **Rationale**:
-- 符合宪法要求：支持YYYY-MM-DD、YYYY-MM-DD上午、YYYY-MM-DD下午三种格式
+- 实际Excel格式：2022-9-23下午（单数字月份和日期）
+- 需要支持：YYYY-M-D、YYYY-MM-DD、YYYY-M-D上午、YYYY-MM-DD上午、YYYY-M-D下午、YYYY-MM-DD下午等格式
 - 需要处理中文"上午"、"下午"标识
 - 需要将"上午"转换为00:00:00，"下午"转换为12:00:00
+- 需要标准化日期格式（统一为YYYY-MM-DD格式存储）
 
 **Implementation Notes**:
 - 创建DateConverter或DateParser工具类
-- 使用DateTime.TryParseExact解析标准格式
+- 支持单数字和双数字的月份和日期（如9-23和09-23）
+- 使用DateTime.TryParseExact解析多种格式
 - 处理"上午"、"下午"后缀，转换为具体时间
+- 标准化输出为YYYY-MM-DD格式
 
 ### 6. 分页实现策略
 

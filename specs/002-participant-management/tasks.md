@@ -37,14 +37,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create Participant model in Timer/Timer/Models/Participant.cs with all properties (Id, SequenceNumber, Name, Gender, DateOfBirth, IdNumber, BibNumber, Group, ChipNumber, CreatedAt, UpdatedAt)
+- [ ] T005 Create Participant model in Timer/Timer/Models/Participant.cs with all properties (Id, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt)
 - [ ] T006 Create ImportResult model in Timer/Timer/Models/ImportResult.cs with TotalRecords, SuccessCount, FailureCount, Errors properties
 - [ ] T007 Create ImportError model in Timer/Timer/Models/ImportError.cs with RowNumber, FieldName, ErrorMessage, RecordData properties
 - [ ] T008 Create SearchFilter model in Timer/Timer/Models/SearchFilter.cs with SearchKeyword, Group, Gender, PageNumber, PageSize properties
 - [ ] T009 Create IParticipantRepository interface in Timer/Timer/Services/IParticipantRepository.cs with all required methods (GetAllAsync, GetByIdAsync, AddAsync, UpdateAsync, DeleteAsync, etc.)
 - [ ] T010 Create DatabaseContext class in Timer/Timer/Data/DatabaseContext.cs for SQLite connection and table creation
 - [ ] T011 Implement database initialization in Timer/Timer/Data/DatabaseContext.cs (CreateTables method with Participants table schema)
-- [ ] T012 Create ParticipantValidator class in Timer/Timer/Services/ParticipantValidator.cs with static validation methods (Validate, ValidateRequiredFields, ValidateDateFormat, ValidateSequenceNumber, ValidateUniqueness)
+- [ ] T012 Create ParticipantValidator class in Timer/Timer/Services/ParticipantValidator.cs with static validation methods (Validate, ValidateRequiredFields, ValidateDateFormat supporting YYYY-M-D and YYYY-MM-DD variants, ValidateSequenceNumber, ValidateUniqueness for ExamNumber)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -68,8 +68,8 @@
 ### Implementation for User Story 1
 
 - [ ] T017 [US1] Create IExcelImportService interface in Timer/Timer/Services/IExcelImportService.cs with ReadFromFileAsync and ImportAsync methods
-- [ ] T018 [US1] Create DateConverter utility class in Timer/Timer/Converters/DateConverter.cs with ParseDate method supporting three formats (YYYY-MM-DD, YYYY-MM-DD上午, YYYY-MM-DD下午)
-- [ ] T019 [US1] Implement ExcelImportService.ReadFromFileAsync in Timer/Timer/Services/ExcelImportService.cs to parse Excel file and return Participant list
+- [ ] T018 [US1] Create DateConverter utility class in Timer/Timer/Converters/DateConverter.cs with ParseDate method supporting multiple formats (YYYY-M-D, YYYY-MM-DD, YYYY-M-D上午, YYYY-MM-DD上午, YYYY-M-D下午, YYYY-MM-DD下午)
+- [ ] T019 [US1] Implement ExcelImportService.ReadFromFileAsync in Timer/Timer/Services/ExcelImportService.cs to parse Excel file with columns (序号, 日期, 学校, 年级, 班级, 姓名, 性别, 准考证号, 组别名称) and return Participant list
 - [ ] T020 [US1] Implement ExcelImportService.ImportAsync in Timer/Timer/Services/ExcelImportService.cs with transaction support, progress reporting, and error collection
 - [ ] T021 [US1] Implement ParticipantRepository.AddAsync in Timer/Timer/Services/ParticipantRepository.cs with batch insert support
 - [ ] T022 [US1] Implement ParticipantRepository transaction methods (BeginTransactionAsync, CommitTransactionAsync, RollbackTransactionAsync) in Timer/Timer/Services/ParticipantRepository.cs
@@ -106,7 +106,7 @@
 - [ ] T037 [US2] Add pagination controls (Previous, Next, Page number) in Timer/Timer/Views/ParticipantView.xaml
 - [ ] T038 [US2] Add loading indicator in Timer/Timer/Views/ParticipantView.xaml (bind to IsLoading)
 - [ ] T039 [US2] Add empty state message in Timer/Timer/Views/ParticipantView.xaml (show when Participants.Count == 0)
-- [ ] T040 [US2] Bind list columns to Participant properties (Name, Gender, BibNumber, Group) in Timer/Timer/Views/ParticipantView.xaml
+- [ ] T040 [US2] Bind list columns to Participant properties (SequenceNumber, Name, Gender, ExamNumber, GroupName, School, Grade, Class) in Timer/Timer/Views/ParticipantView.xaml
 - [ ] T041 [US2] Call LoadParticipantsAsync in ParticipantViewModel constructor or OnNavigatedTo method
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - import and list display should work correctly
@@ -122,7 +122,7 @@
 ### Tests for User Story 3 (REQUIRED per Constitution) ⚠️
 
 - [ ] T042 [P] [US3] Create unit test for ParticipantRepository.UpdateAsync in Timer/Timer.Tests/Services/ParticipantRepositoryTests.cs
-- [ ] T043 [P] [US3] Create unit test for ParticipantRepository.ExistsByIdNumberAsync and ExistsByBibNumberAsync in Timer/Timer.Tests/Services/ParticipantRepositoryTests.cs
+- [ ] T043 [P] [US3] Create unit test for ParticipantRepository.ExistsByExamNumberAsync and ExistsByBibNumberAsync in Timer/Timer.Tests/Services/ParticipantRepositoryTests.cs
 
 ### Implementation for User Story 3
 
@@ -132,7 +132,7 @@
 - [ ] T047 [US3] Implement EditParticipantAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs to open edit dialog and save changes
 - [ ] T048 [US3] Create EditParticipantDialog.xaml in Timer/Timer/Views/EditParticipantDialog.xaml with form fields for all Participant properties
 - [ ] T049 [US3] Create EditParticipantDialog.xaml.cs in Timer/Timer/Views/EditParticipantDialog.xaml.cs with dialog logic
-- [ ] T050 [US3] Add data validation in EditParticipantDialog (required fields, format validation, uniqueness check)
+- [ ] T050 [US3] Add data validation in EditParticipantDialog (required fields: Name, Gender, Date; format validation; uniqueness check for ExamNumber)
 - [ ] T051 [US3] Add error display in EditParticipantDialog.xaml to show validation errors
 - [ ] T052 [US3] Add Edit button column in ParticipantView.xaml DataGrid/ListView
 - [ ] T053 [US3] Bind Edit button to EditCommand in Timer/Timer/Views/ParticipantView.xaml
@@ -154,13 +154,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] Update ParticipantRepository.GetAllAsync in Timer/Timer/Services/ParticipantRepository.cs to support SearchFilter with SQL LIKE for name, BibNumber, IdNumber search
-- [ ] T057 [US4] Update ParticipantRepository.GetAllAsync in Timer/Timer/Services/ParticipantRepository.cs to support Group and Gender filtering with WHERE clauses
+- [ ] T056 [US4] Update ParticipantRepository.GetAllAsync in Timer/Timer/Services/ParticipantRepository.cs to support SearchFilter with SQL LIKE for name, ExamNumber, BibNumber search
+- [ ] T057 [US4] Update ParticipantRepository.GetAllAsync in Timer/Timer/Services/ParticipantRepository.cs to support GroupName, Gender, School filtering with WHERE clauses
 - [ ] T058 [US4] Update ParticipantViewModel in Timer/Timer/ViewModels/ParticipantViewModel.cs to add SearchFilter property and SearchCommand (RelayCommand)
 - [ ] T059 [US4] Implement SearchAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs to apply search filter and reload list
 - [ ] T060 [US4] Add ClearSearchCommand in Timer/Timer/ViewModels/ParticipantViewModel.cs to clear search and reload all data
 - [ ] T061 [US4] Add search textbox in Timer/Timer/Views/ParticipantView.xaml with binding to SearchFilter.SearchKeyword
-- [ ] T062 [US4] Add filter controls (Group dropdown, Gender dropdown) in Timer/Timer/Views/ParticipantView.xaml
+- [ ] T062 [US4] Add filter controls (GroupName dropdown, Gender dropdown, School dropdown) in Timer/Timer/Views/ParticipantView.xaml
 - [ ] T063 [US4] Bind search button to SearchCommand in Timer/Timer/Views/ParticipantView.xaml
 - [ ] T064 [US4] Bind clear search button to ClearSearchCommand in Timer/Timer/Views/ParticipantView.xaml
 - [ ] T065 [US4] Implement real-time search (optional: debounce for performance) in Timer/Timer/ViewModels/ParticipantViewModel.cs
@@ -319,8 +319,8 @@ With multiple developers:
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Database file location: `data/timer.db` (create data/ folder if not exists)
-- Excel template structure needs to be confirmed from actual template file
-- Date format support: YYYY-MM-DD, YYYY-MM-DD上午, YYYY-MM-DD下午
+- Excel template columns: 序号, 日期, 学校, 年级, 班级, 姓名, 性别, 准考证号, 组别名称
+- Date format support: YYYY-M-D, YYYY-MM-DD, YYYY-M-D上午, YYYY-MM-DD上午, YYYY-M-D下午, YYYY-MM-DD下午 (支持单数字和双数字格式)
 - Sequence number must start from 1 and be consecutive
 - All database operations must use transactions for data consistency
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
