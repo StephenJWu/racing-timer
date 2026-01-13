@@ -76,6 +76,11 @@ namespace Timer.Models
         /// 更新时间
         /// </summary>
         public DateTime UpdatedAt { get; set; }
+
+        /// <summary>
+        /// UI选择状态（用于批量操作），不持久化到数据库
+        /// </summary>
+        public bool IsSelected { get; set; }
     }
 }
 

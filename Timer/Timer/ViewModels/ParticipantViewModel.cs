@@ -69,6 +69,9 @@ namespace Timer.ViewModels
             SchoolChangedCommand = new AsyncRelayCommand<string>(OnSchoolChangedAsync);
             GradeChangedCommand = new AsyncRelayCommand<string>(OnGradeChangedAsync);
             ClassChangedCommand = new AsyncRelayCommand<string>(OnClassChangedAsync);
+            EditCommand = new AsyncRelayCommand<Participant>(EditParticipantAsync, participant => participant != null);
+            DeleteCommand = new AsyncRelayCommand<Participant>(DeleteParticipantAsync, participant => participant != null);
+            BatchDeleteCommand = new AsyncRelayCommand(BatchDeleteParticipantsAsync);
 
             // 初始化时加载数据
             _ = LoadSchoolsAsync();
@@ -244,6 +247,21 @@ namespace Timer.ViewModels
         /// 班级选择改变命令
         /// </summary>
         public IAsyncRelayCommand<string> ClassChangedCommand { get; }
+
+        /// <summary>
+        /// 编辑参赛人员命令
+        /// </summary>
+        public IAsyncRelayCommand<Participant> EditCommand { get; }
+
+        /// <summary>
+        /// 删除单个参赛人员命令
+        /// </summary>
+        public IAsyncRelayCommand<Participant> DeleteCommand { get; }
+
+        /// <summary>
+        /// 批量删除参赛人员命令（基于行勾选）
+        /// </summary>
+        public IAsyncRelayCommand BatchDeleteCommand { get; }
 
         /// <summary>
         /// 开始日期
@@ -666,6 +684,133 @@ namespace Timer.ViewModels
                 {
                     _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 编辑参赛人员信息
+        /// </summary>
+        /// <param name="participant">要编辑的参赛人员</param>
+        private async Task EditParticipantAsync(Participant? participant)
+        {
+            if (participant == null)
+            {
+                _loggingService?.Warn("尝试编辑一个空的人员对象");
+                return;
+            }
+
+            try
+            {
+                // 从数据库重新加载最新数据
+                var latestParticipant = await _repository.GetByIdAsync(participant.Id);
+                if (latestParticipant == null)
+                {
+                    MessageBox.Show("该人员记录不存在，可能已被删除。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    await LoadParticipantsAsync(); // 刷新列表
+                    return;
+                }
+
+                // 打开编辑对话框
+                var dialog = new Views.EditParticipantDialog(latestParticipant, _repository, _loggingService)
+                {
+                    Owner = Application.Current?.MainWindow
+                };
+                if (dialog.ShowDialog() == true)
+                {
+                    // 用户点击了保存，对话框已经更新了数据库
+                    _loggingService?.Info($"成功编辑参赛人员: {latestParticipant.Name} (ID: {latestParticipant.Id})");
+                    
+                    // 刷新列表和筛选数据源
+                    await LoadParticipantsAsync();
+                    await RefreshFilterSourcesAsync();
+                    
+                    MessageBox.Show("参赛人员信息已成功更新。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"编辑参赛人员失败: {ex.Message}", ex);
+                MessageBox.Show($"编辑失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 删除单个参赛人员
+        /// </summary>
+        private async Task DeleteParticipantAsync(Participant? participant)
+        {
+            if (participant == null)
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"确定要删除“{participant.Name}”吗？\n此操作不可恢复。",
+                "确认删除",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                await _repository.DeleteAsync(participant.Id);
+                _loggingService?.Info($"删除参赛人员: {participant.Name} (ID: {participant.Id})");
+
+                // 刷新列表与筛选源
+                await LoadParticipantsAsync();
+                await RefreshFilterSourcesAsync();
+
+                MessageBox.Show("删除成功。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"删除参赛人员失败: {ex.Message}", ex);
+                MessageBox.Show($"删除失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 批量删除（按行勾选 IsSelected）
+        /// </summary>
+        private async Task BatchDeleteParticipantsAsync()
+        {
+            var selected = Participants.Where(p => p.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("请先勾选要删除的人员。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"确定要删除已勾选的 {selected.Count} 条记录吗？\n此操作不可恢复。",
+                "确认批量删除",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                await _repository.DeleteBatchAsync(selected.Select(p => p.Id));
+                _loggingService?.Info($"批量删除参赛人员: {selected.Count} 条");
+
+                // 刷新列表与筛选源
+                await LoadParticipantsAsync();
+                await RefreshFilterSourcesAsync();
+
+                MessageBox.Show("批量删除成功。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"批量删除参赛人员失败: {ex.Message}", ex);
+                MessageBox.Show($"批量删除失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

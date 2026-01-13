@@ -142,7 +142,9 @@
         <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderColorBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="8,6"/>
+        <!-- 32px高度下避免文字被裁剪：减小上下Padding并居中 -->
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -170,7 +172,9 @@
         <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderColorBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="8,6"/>
+        <!-- 32px高度下避免文字被裁剪：减小上下Padding并居中 -->
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="14"/>
         <!-- 不覆盖Template：保留系统默认弹出层/列表逻辑，避免“下拉不显示/不弹出” -->
         <Style.Triggers>

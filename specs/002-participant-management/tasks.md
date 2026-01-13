@@ -182,18 +182,18 @@
 
 ### Implementation for User Story 5
 
-- [ ] T068 [US5] Implement ParticipantRepository.DeleteAsync in Timer/Timer/Services/ParticipantRepository.cs
-- [ ] T069 [US5] Implement ParticipantRepository.DeleteBatchAsync in Timer/Timer/Services/ParticipantRepository.cs with transaction support
-- [ ] T070 [US5] Update ParticipantViewModel in Timer/Timer/ViewModels/ParticipantViewModel.cs to add DeleteCommand (RelayCommand<Participant>) and BatchDeleteCommand (RelayCommand<IEnumerable<Participant>>)
-- [ ] T071 [US5] Implement DeleteParticipantAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs with confirmation dialog
-- [ ] T072 [US5] Implement BatchDeleteParticipantsAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs with confirmation dialog showing count
-- [ ] T073 [US5] Add Delete button column in ParticipantView.xaml DataGrid/ListView
-- [ ] T074 [US5] Add checkbox column for multi-select in ParticipantView.xaml DataGrid/ListView
-- [ ] T075 [US5] Add batch delete button in Timer/Timer/Views/ParticipantView.xaml
-- [ ] T076 [US5] Bind Delete button to DeleteCommand in Timer/Timer/Views/ParticipantView.xaml
-- [ ] T077 [US5] Bind batch delete button to BatchDeleteCommand in Timer/Timer/Views/ParticipantView.xaml
-- [ ] T078 [US5] Create confirmation dialog (MessageBox or custom dialog) for delete confirmation
-- [ ] T079 [US5] Refresh list after successful delete in Timer/Timer/ViewModels/ParticipantViewModel.cs
+- [x] T068 [US5] Implement ParticipantRepository.DeleteAsync in Timer/Timer/Services/ParticipantRepository.cs
+- [x] T069 [US5] Implement ParticipantRepository.DeleteBatchAsync in Timer/Timer/Services/ParticipantRepository.cs
+- [x] T070 [US5] Update ParticipantViewModel in Timer/Timer/ViewModels/ParticipantViewModel.cs to add DeleteCommand and BatchDeleteCommand
+- [x] T071 [US5] Implement DeleteParticipantAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs with confirmation dialog
+- [x] T072 [US5] Implement BatchDeleteParticipantsAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs with confirmation dialog showing count
+- [x] T073 [US5] Add Delete button column in ParticipantView.xaml DataGrid
+- [x] T074 [US5] Add checkbox column for multi-select in ParticipantView.xaml DataGrid (基于Participant.IsSelected)
+- [x] T075 [US5] Add batch delete button in Timer/Timer/Views/ParticipantView.xaml
+- [x] T076 [US5] Bind Delete button to DeleteCommand in Timer/Timer/Views/ParticipantView.xaml
+- [x] T077 [US5] Bind batch delete button to BatchDeleteCommand in Timer/Timer/Views/ParticipantView.xaml
+- [x] T078 [US5] Create confirmation dialog (MessageBox) for delete confirmation
+- [x] T079 [US5] Refresh list after successful delete in Timer/Timer/ViewModels/ParticipantViewModel.cs
 
 **Checkpoint**: At this point, all user stories should be independently functional - import, list display, edit, search/filter, and delete should all work correctly
 

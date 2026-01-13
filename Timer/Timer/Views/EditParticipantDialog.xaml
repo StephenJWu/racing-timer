@@ -1,0 +1,192 @@
+<Window x:Class="Timer.Views.EditParticipantDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:Timer.Converters"
+        Title="编辑参赛人员信息"
+        Width="600"
+        Height="650"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0"
+                   Text="编辑参赛人员信息"
+                   FontSize="18"
+                   FontWeight="Bold"
+                   Foreground="{StaticResource TextColorBrush}"
+                   Margin="0,0,0,20"/>
+
+        <!-- 表单区域 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 比赛日期 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="比赛日期 *"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}"
+                                Width="280"
+                                Height="32"/>
+                </StackPanel>
+
+                <!-- 学校 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="学校"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding School, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 年级 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="年级"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Grade, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 班级 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="班级"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Class, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 姓名 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="姓名 *"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 性别 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="性别 *"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding GenderOptions}"
+                              SelectedItem="{Binding Gender, UpdateSourceTrigger=PropertyChanged}"
+                              Width="280"
+                              Height="32"/>
+                </StackPanel>
+
+                <!-- 准考证号 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="准考证号"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ExamNumber, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 组别 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="组别"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding GroupName, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 号码布 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="号码布"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding BibNumber, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+
+                <!-- 芯片编号 -->
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="芯片编号"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ChipNumber, UpdateSourceTrigger=PropertyChanged}"
+                             Width="280"
+                             Height="32"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 错误提示 -->
+        <Border Grid.Row="2"
+                Background="#fff2f0"
+                BorderBrush="#ffccc7"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="12"
+                Margin="0,0,0,16"
+                Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="请修正以下错误："
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="#cf1322"
+                           Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding ValidationErrors}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       FontSize="11"
+                                       Foreground="#cf1322"
+                                       Margin="0,2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <!-- 按钮 -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="取消"
+                    Click="CancelButton_Click"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Padding="24,8"
+                    Margin="0,0,12,0"
+                    FontSize="12"/>
+            <Button Content="保存"
+                    Click="SaveButton_Click"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Padding="24,8"
+                    FontSize="12"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

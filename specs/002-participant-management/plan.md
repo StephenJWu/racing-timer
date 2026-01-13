@@ -14,7 +14,7 @@
   - Date range filtering (StartDate, EndDate)
   - Cascading dropdowns (School -> Grade -> Class -> Group)
   - Real-time filter updates
-- ⏳ **Phase 7**: User Story 5 (删除) - Pending
+- ✅ **Phase 7**: User Story 5 (删除) - Completed (单条删除 + 勾选批量删除 + 确认弹窗)
 - 🔄 **Phase 8**: Polish & Cross-Cutting - Partial:
   - ✅ Error handling implemented
   - ✅ IDisposable pattern implemented
