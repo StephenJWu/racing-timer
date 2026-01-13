@@ -47,8 +47,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -63,6 +63,7 @@
                                    Foreground="{StaticResource SecondaryTextColorBrush}"
                                    Margin="0,0,0,4"/>
                         <DatePicker SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged}"
+                                    SelectedDateFormat="Short"
                                     Width="140"
                                     Height="32"/>
                     </StackPanel>
@@ -74,6 +75,7 @@
                                    Foreground="{StaticResource SecondaryTextColorBrush}"
                                    Margin="0,0,0,4"/>
                         <DatePicker SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged}"
+                                    SelectedDateFormat="Short"
                                     Width="140"
                                     Height="32"/>
                     </StackPanel>
@@ -180,19 +182,23 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <!-- 按钮区域 -->
-                    <StackPanel Grid.Column="7" Grid.Row="0" 
-                                Orientation="Horizontal" 
-                                VerticalAlignment="Bottom"
-                                Margin="12,0,0,12">
-                        <Button Content="查询" 
-                                Command="{Binding SearchCommand}"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Margin="0,0,8,0"/>
-                        <Button Content="导入人员信息" 
-                                Command="{Binding ImportCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}"/>
-                    </StackPanel>
+                    <!-- 查询按钮：紧贴筛选项后面 -->
+                    <Button Grid.Column="6"
+                            Grid.Row="0"
+                            Content="查询"
+                            Command="{Binding SearchCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,12,12"/>
+
+                    <!-- 导入按钮：单独最右边 -->
+                    <Button Grid.Column="8"
+                            Grid.Row="0"
+                            Content="导入人员信息"
+                            Command="{Binding ImportCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,12"/>
                 </Grid>
             </StackPanel>
         </Border>
@@ -245,19 +251,18 @@
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           HeadersVisibility="Column"
-                          GridLinesVisibility="Horizontal"
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
                           Height="400">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="比赛日期" Binding="{Binding Date, StringFormat=yyyy-MM-dd}" Width="120"/>
+                        <DataGridTextColumn Header="比赛日期" Binding="{Binding Date, StringFormat=yyyy-M-d}" Width="120"/>
                         <DataGridTextColumn Header="学校" Binding="{Binding School}" Width="120"/>
                         <DataGridTextColumn Header="年级" Binding="{Binding Grade}" Width="100"/>
                         <DataGridTextColumn Header="班级" Binding="{Binding Class}" Width="100"/>
+                        <DataGridTextColumn Header="组别" Binding="{Binding GroupName}" Width="120"/>
                         <DataGridTextColumn Header="姓名" Binding="{Binding Name}" Width="120"/>
                         <DataGridTextColumn Header="性别" Binding="{Binding Gender}" Width="80"/>
                         <DataGridTextColumn Header="准考证号" Binding="{Binding ExamNumber}" Width="140"/>
-                        <DataGridTextColumn Header="组别" Binding="{Binding GroupName}" Width="120"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </StackPanel>

@@ -77,15 +77,16 @@ namespace Timer.Services
                 parameters.Add(new SqliteParameter("@class", filter.Class));
             }
 
+            // Date 字段在库中是字符串（yyyy-MM-dd HH:mm:ss），这里统一按“日期部分”比较，避免 EndDate 当天筛不出数据
             if (filter.StartDate.HasValue)
             {
-                whereClauses.Add("Date >= @startDate");
+                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
                 parameters.Add(new SqliteParameter("@startDate", filter.StartDate.Value.ToString("yyyy-MM-dd")));
             }
 
             if (filter.EndDate.HasValue)
             {
-                whereClauses.Add("Date <= @endDate");
+                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
                 parameters.Add(new SqliteParameter("@endDate", filter.EndDate.Value.ToString("yyyy-MM-dd")));
             }
 
@@ -220,15 +221,16 @@ namespace Timer.Services
                 parameters.Add(new SqliteParameter("@class", filter.Class));
             }
 
+            // Date 字段在库中是字符串（yyyy-MM-dd HH:mm:ss），这里统一按“日期部分”比较，避免 EndDate 当天筛不出数据
             if (filter.StartDate.HasValue)
             {
-                whereClauses.Add("Date >= @startDate");
+                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
                 parameters.Add(new SqliteParameter("@startDate", filter.StartDate.Value.ToString("yyyy-MM-dd")));
             }
 
             if (filter.EndDate.HasValue)
             {
-                whereClauses.Add("Date <= @endDate");
+                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
                 parameters.Add(new SqliteParameter("@endDate", filter.EndDate.Value.ToString("yyyy-MM-dd")));
             }
 

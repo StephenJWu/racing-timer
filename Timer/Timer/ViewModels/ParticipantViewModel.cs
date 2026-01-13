@@ -410,6 +410,8 @@ namespace Timer.ViewModels
 
                         // 刷新列表
                         await LoadParticipantsAsync();
+                        // 刷新筛选项数据源（学校/年级/班级/组别）
+                        await RefreshFilterSourcesAsync();
                     }
                     catch (Exception ex)
                     {
@@ -541,8 +543,19 @@ namespace Timer.ViewModels
         {
             try
             {
-                var schools = await _repository.GetDistinctSchoolsAsync();
+                var currentSchool = SearchFilter.School;
+                var schools = (await _repository.GetDistinctSchoolsAsync()).ToList();
                 Schools = new ObservableCollection<string>(schools);
+
+                // 如果当前选择已不存在，则清空；否则保留，并触发级联刷新
+                if (!string.IsNullOrWhiteSpace(currentSchool) && schools.Contains(currentSchool))
+                {
+                    await OnSchoolChangedAsync(currentSchool);
+                }
+                else if (!string.IsNullOrWhiteSpace(currentSchool) && !schools.Contains(currentSchool))
+                {
+                    await OnSchoolChangedAsync(null);
+                }
             }
             catch (Exception ex)
             {
@@ -550,6 +563,28 @@ namespace Timer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 刷新筛选项数据源（导入后/数据变化后调用）
+        /// </summary>
+        private async Task RefreshFilterSourcesAsync()
+        {
+            // 先刷新学校（内部会根据当前选择触发级联刷新）
+            await LoadSchoolsAsync();
+
+            // 如果没有选学校，则提供“全量”年级列表，方便用户直接选年级再选学校（可按需要调整）
+            if (string.IsNullOrWhiteSpace(SearchFilter.School))
+            {
+                try
+                {
+                    var grades = await _repository.GetDistinctGradesAsync(null);
+                    Grades = new ObservableCollection<string>(grades);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"刷新年级列表失败: {ex.Message}", ex);
+                }
+            }
+        }
         /// <summary>
         /// 学校选择改变时的处理
         /// </summary>
