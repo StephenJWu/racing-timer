@@ -82,3 +82,10 @@ coverage*.info
 .idea/
 *.sln.iml
 
+# 安装程序输出
+Output/
+*.exe
+!Timer.exe
+
+# 发布文件
+Timer/Timer/bin/Publish/
