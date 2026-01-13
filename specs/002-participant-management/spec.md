@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-participant-management`  
 **Created**: 2025-01-27  
-**Status**: In Progress (Phase 1-4, 6-7 completed, Phase 5 pending, Phase 8 partial)  
+**Status**: In Progress (Phase 1-7 completed, Phase 8 partial)  
 **Input**: User description: "实现参赛人员管理功能，包括Excel导入、列表显示、编辑、删除、搜索筛选功能，数据持久化到SQLite"
 
 **Implementation Status**:
@@ -10,10 +10,10 @@
 - ✅ Phase 2: Foundational - Completed
 - ✅ Phase 3: User Story 1 (Excel导入) - Completed
 - ✅ Phase 4: User Story 2 (列表显示) - Completed
-- ⏳ Phase 5: User Story 3 (编辑) - Pending
+- ✅ Phase 5: User Story 3 (编辑) - Completed（编辑对话框、数据验证、唯一性检查、保存后刷新）
 - ✅ Phase 6: User Story 4 (搜索筛选) - Completed (已扩展支持日期范围、级联下拉筛选)
 - ✅ Phase 7: User Story 5 (删除) - Completed（支持单条删除与勾选批量删除，含确认弹窗）
-- 🔄 Phase 8: Polish & Cross-Cutting - Partial (UI/UX improvements completed)
+- 🔄 Phase 8: Polish & Cross-Cutting - Partial (UI/UX improvements completed, unit tests pending)
 
 ## User Scenarios & Testing *(mandatory)*
 

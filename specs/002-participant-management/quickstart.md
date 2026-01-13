@@ -180,8 +180,8 @@
 - [x] 错误处理友好（数据库错误、文件错误等）
 - [x] 事务处理正常（导入失败时回滚）
 - [x] UI样式优化（DataGrid单横线、ComboBox下拉正常显示、日期格式yyyy-M-d）
-- [ ] 编辑功能正常（Phase 5 - Pending）
-- [ ] 删除功能正常（单个和批量）（Phase 7 - Pending）
+- [x] 编辑功能正常（Phase 5 - Completed，支持编辑对话框、数据验证、保存后刷新）
+- [x] 删除功能正常（单个和批量）（Phase 7 - Completed，支持单条删除与勾选批量删除）
 
 ## Known Limitations
 
@@ -189,7 +189,7 @@
 - 当前版本不支持数据导出为Excel（后续功能）
 - Excel模板的具体字段结构需要根据实际模板文件确认
 - 日期格式支持多种格式（YYYY-M-D, YYYY-MM-DD及其"上午"/"下午"变体），其他格式会被拒绝
-- 编辑功能（Phase 5）和删除功能（Phase 7）尚未实现
+- 编辑功能（Phase 5）和删除功能（Phase 7）已完成
 - 单元测试覆盖率尚未达到80%目标（Phase 8 - Pending）
 
 ## Next Steps

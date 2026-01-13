@@ -9,7 +9,11 @@
 - ✅ **Phase 1-2**: Setup & Foundational infrastructure - Completed
 - ✅ **Phase 3**: User Story 1 (Excel导入) - Completed with full validation and transaction support
 - ✅ **Phase 4**: User Story 2 (列表显示) - Completed with pagination and loading states
-- ⏳ **Phase 5**: User Story 3 (编辑) - Pending
+- ✅ **Phase 5**: User Story 3 (编辑) - Completed with:
+  - EditParticipantDialog with EditParticipantDialogViewModel
+  - Full data validation (required fields, format, uniqueness)
+  - Error display and user feedback
+  - Auto-refresh after successful edit
 - ✅ **Phase 6**: User Story 4 (搜索筛选) - Completed with enhanced features:
   - Date range filtering (StartDate, EndDate)
   - Cascading dropdowns (School -> Grade -> Class -> Group)
@@ -19,7 +23,7 @@
   - ✅ Error handling implemented
   - ✅ IDisposable pattern implemented
   - ✅ Logging integrated
-  - ✅ UI/UX improvements (DateDisplayConverter, DataGrid styling fixes, ComboBox fixes)
+  - ✅ UI/UX improvements (DateDisplayConverter, DataGrid styling fixes, ComboBox fixes, EditDialog fixes)
   - ⏳ Unit tests pending
   - ⏳ Database health check pending
 

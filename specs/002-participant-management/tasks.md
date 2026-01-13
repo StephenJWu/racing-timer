@@ -126,17 +126,17 @@
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement ParticipantRepository.UpdateAsync in Timer/Timer/Services/ParticipantRepository.cs with validation and uniqueness check
-- [ ] T045 [US3] Implement ParticipantRepository.GetByIdAsync in Timer/Timer/Services/ParticipantRepository.cs
-- [ ] T046 [US3] Update ParticipantViewModel in Timer/Timer/ViewModels/ParticipantViewModel.cs to add EditCommand (RelayCommand<Participant>), SelectedParticipant property
-- [ ] T047 [US3] Implement EditParticipantAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs to open edit dialog and save changes
-- [ ] T048 [US3] Create EditParticipantDialog.xaml in Timer/Timer/Views/EditParticipantDialog.xaml with form fields for all Participant properties
-- [ ] T049 [US3] Create EditParticipantDialog.xaml.cs in Timer/Timer/Views/EditParticipantDialog.xaml.cs with dialog logic
-- [ ] T050 [US3] Add data validation in EditParticipantDialog (required fields: Name, Gender, Date; format validation; uniqueness check for ExamNumber)
-- [ ] T051 [US3] Add error display in EditParticipantDialog.xaml to show validation errors
-- [ ] T052 [US3] Add Edit button column in ParticipantView.xaml DataGrid/ListView
-- [ ] T053 [US3] Bind Edit button to EditCommand in Timer/Timer/Views/ParticipantView.xaml
-- [ ] T054 [US3] Refresh list after successful edit in Timer/Timer/ViewModels/ParticipantViewModel.cs
+- [x] T044 [US3] Implement ParticipantRepository.UpdateAsync in Timer/Timer/Services/ParticipantRepository.cs with validation and uniqueness check
+- [x] T045 [US3] Implement ParticipantRepository.GetByIdAsync in Timer/Timer/Services/ParticipantRepository.cs
+- [x] T046 [US3] Update ParticipantViewModel in Timer/Timer/ViewModels/ParticipantViewModel.cs to add EditCommand (RelayCommand<Participant>), SelectedParticipant property
+- [x] T047 [US3] Implement EditParticipantAsync method in Timer/Timer/ViewModels/ParticipantViewModel.cs to open edit dialog and save changes
+- [x] T048 [US3] Create EditParticipantDialog.xaml in Timer/Timer/Views/EditParticipantDialog.xaml with form fields for all Participant properties
+- [x] T049 [US3] Create EditParticipantDialog.xaml.cs in Timer/Timer/Views/EditParticipantDialog.xaml.cs with dialog logic (已创建EditParticipantDialogViewModel.cs统一管理DataContext)
+- [x] T050 [US3] Add data validation in EditParticipantDialog (required fields: Name, Gender, Date; format validation; uniqueness check for ExamNumber)
+- [x] T051 [US3] Add error display in EditParticipantDialog.xaml to show validation errors
+- [x] T052 [US3] Add Edit button column in ParticipantView.xaml DataGrid/ListView
+- [x] T053 [US3] Bind Edit button to EditCommand in Timer/Timer/Views/ParticipantView.xaml
+- [x] T054 [US3] Refresh list after successful edit in Timer/Timer/ViewModels/ParticipantViewModel.cs
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently - import, list display, and edit should work correctly
 
