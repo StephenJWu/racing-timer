@@ -11,15 +11,14 @@
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="256"/>
+            <ColumnDefinition Width="200"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Left Navigation Menu Area -->
         <Border Grid.Column="0" 
-                Background="{StaticResource CardBackgroundBrush}" 
-                BorderBrush="{StaticResource BorderColorBrush}" 
-                BorderThickness="0,0,1,0">
+                Background="{StaticResource SidebarBackgroundBrush}" 
+                BorderThickness="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -28,8 +27,8 @@
                 
                 <!-- Menu Header -->
                 <Border Grid.Row="0" 
-                        Background="{StaticResource CardBackgroundBrush}" 
-                        BorderBrush="{StaticResource BorderColorBrush}" 
+                        Background="{StaticResource SidebarBackgroundBrush}" 
+                        BorderBrush="#334155" 
                         BorderThickness="0,0,0,1" 
                         Padding="16,12">
                     <StackPanel Orientation="Horizontal">
@@ -43,7 +42,7 @@
                                        VerticalAlignment="Center" 
                                        Foreground="White"/>
                         </Border>
-                        <TextBlock Text="TIMER" 
+                        <TextBlock Text="比赛管理系统" 
                                    FontSize="11" 
                                    FontWeight="Bold" 
                                    Foreground="{StaticResource PrimaryColorBrush}" 
@@ -66,11 +65,11 @@
                                                 <Setter Property="Background" Value="Transparent"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
-                                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryColorBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{StaticResource SidebarSelectedBrush}"/>
                                                     </DataTrigger>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
                                                     </Trigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -84,13 +83,13 @@
                                                        VerticalAlignment="Center"
                                                        FontSize="12"
                                                        FontWeight="Bold"
-                                                       Foreground="{StaticResource TextColorBrush}">
+                                                       Foreground="{StaticResource SidebarTextBrush}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource SidebarTextBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryColorBrush}"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource SidebarSelectedBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -100,7 +99,7 @@
                                                        VerticalAlignment="Center"
                                                        FontFamily="Segoe UI Symbol"
                                                        FontSize="9"
-                                                       Foreground="{StaticResource SecondaryTextColorBrush}"
+                                                       Foreground="{StaticResource SidebarTextBrush}"
                                                        Margin="8,0,0,0"
                                                        Visibility="{Binding HasChildren, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <TextBlock.Style>
@@ -136,11 +135,11 @@
                                                             <Setter Property="Background" Value="Transparent"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                    <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
-                                                                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColorBrush}"/>
+                                                                    <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource SidebarSelectedBrush}"/>
                                                                 </DataTrigger>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
+                                                                    <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
                                                                 </Trigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -149,13 +148,13 @@
                                                         <TextBlock Text="{Binding Title}" 
                                                                    VerticalAlignment="Center"
                                                                    FontSize="11"
-                                                                   Foreground="{StaticResource SecondaryTextColorBrush}">
+                                                                   Foreground="{StaticResource SidebarTextBrush}">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource SidebarTextBrush}"/>
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryColorBrush}"/>
+                                                                            <Setter Property="Foreground" Value="{StaticResource SidebarSelectedBrush}"/>
                                                                             <Setter Property="FontWeight" Value="Bold"/>
                                                                         </DataTrigger>
                                                                     </Style.Triggers>

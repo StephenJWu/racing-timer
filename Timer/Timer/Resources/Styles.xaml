@@ -12,6 +12,12 @@
     <SolidColorBrush x:Key="BorderColorBrush" Color="#e8e8e8"/>
     <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#f0f0f0"/>
     <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#e6f7ff"/>
+    <!-- 侧边栏深色背景 -->
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#1e293b"/>
+    <SolidColorBrush x:Key="SidebarTextBrush" Color="#e2e8f0"/>
+    <SolidColorBrush x:Key="SidebarHoverBrush" Color="#334155"/>
+    <SolidColorBrush x:Key="SidebarSelectedBrush" Color="#3b82f6"/>
+    
     <!-- 表格表头（浅色） -->
     <SolidColorBrush x:Key="TableHeaderBackgroundBrush" Color="#64748b"/>
     <SolidColorBrush x:Key="TableHeaderForegroundBrush" Color="#ffffff"/>
