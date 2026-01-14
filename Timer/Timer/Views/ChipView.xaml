@@ -1,22 +1,301 @@
 <UserControl x:Class="Timer.Views.ChipView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:Timer.Converters"
              Background="{StaticResource BackgroundBrush}">
+    <UserControl.Resources>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter"/>
+    </UserControl.Resources>
+    
     <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding Title}" 
-                           FontSize="32" 
-                           FontWeight="Bold" 
-                           FontStyle="Italic"
-                           HorizontalAlignment="Center"
-                           Foreground="{StaticResource TextColorBrush}"
-                           Margin="0,0,0,16"/>
-                <TextBlock Text="{Binding Message}" 
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" MinHeight="200"/>
+            <RowDefinition Height="*" MinHeight="200"/>
+        </Grid.RowDefinitions>
+
+        <!-- 上半部分：芯片组列表区域 -->
+        <Border Grid.Row="0" 
+                Style="{StaticResource CardStyle}"
+                Margin="0,0,0,16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 标题栏：左侧显示标题，右侧显示导入按钮 -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="📋" 
+                                   FontSize="20" 
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Text="所有芯片组列表" 
+                                   FontSize="18" 
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource TextColorBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Content="📥 导入芯片信息"
+                            Command="{Binding ImportCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- 导入进度和结果 -->
+                <Border Grid.Row="1"
+                        Background="#f0f9ff"
+                        BorderBrush="#bae6fd"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Margin="0,0,0,16"
+                        Padding="12"
+                        Visibility="{Binding ImportResult, Converter={StaticResource NullToVisibilityConverter}}">
+                    <StackPanel>
+                        <ProgressBar Value="{Binding ImportProgress}" 
+                                     Maximum="100" 
+                                     Height="8" 
+                                     Margin="0,0,0,8"
+                                     Background="#e0f2fe"
+                                     Foreground="#0ea5e9"/>
+                        <TextBlock FontSize="13"
+                                   Foreground="#0369a1"
+                                   Margin="0,0,0,4">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="导入结果：成功 {0} 条，失败 {1} 条">
+                                    <Binding Path="ImportResult.SuccessCount"/>
+                                    <Binding Path="ImportResult.FailureCount"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        <ItemsControl ItemsSource="{Binding ImportResult.Errors}" 
+                                      MaxHeight="100">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" 
+                                               FontSize="11"
+                                               Foreground="#dc2626"
+                                               Margin="0,2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 芯片组列表表格 -->
+                <DataGrid Grid.Row="2"
+                          ItemsSource="{Binding ChipGroups}"
+                          SelectedItem="{Binding SelectedChipGroup, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeRows="False"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                    <DataGrid.Columns>
+                        <!-- 选择列 (单选框) -->
+                        <DataGridTemplateColumn Header="选择" Width="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <RadioButton GroupName="ChipGroupSelection"
+                                                 IsChecked="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}"
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <!-- 组名 -->
+                        <DataGridTextColumn Header="组名" 
+                                            Binding="{Binding GroupName}" 
+                                            Width="*"/>
+                        
+                        <!-- 组颜色 -->
+                        <DataGridTemplateColumn Header="组颜色" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Rectangle Width="40" 
+                                               Height="22"
+                                               RadiusX="3"
+                                               RadiusY="3"
+                                               HorizontalAlignment="Center">
+                                        <Rectangle.Fill>
+                                            <Binding Path="Color" Converter="{StaticResource HexColorToBrushConverter}"/>
+                                        </Rectangle.Fill>
+                                    </Rectangle>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <!-- 数量 -->
+                        <DataGridTextColumn Header="数量" 
+                                            Binding="{Binding ChipCount}" 
+                                            Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        
+                        <!-- 操作列 -->
+                        <DataGridTemplateColumn Header="操作" Width="140">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" 
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                        <Button Content="编辑" 
+                                                Style="{StaticResource TableEditButtonStyle}"
+                                                Command="{Binding DataContext.EditChipGroupCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="删除" 
+                                                Style="{StaticResource TableDeleteButtonStyle}"
+                                                Command="{Binding DataContext.DeleteChipGroupCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                
+                <!-- 空状态提示 - 当没有芯片组时显示 -->
+                <Border Grid.Row="2"
+                        Visibility="{Binding ChipGroups.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                    <TextBlock Text="暂无芯片组，请导入芯片信息"
+                               FontSize="14"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 下半部分：芯片详情区域 -->
+        <Border Grid.Row="1" 
+                Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 标题 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                    <TextBlock Text="📊" 
+                               FontSize="20" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <TextBlock FontSize="18" 
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextColorBrush}"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="芯片组详情"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedChipGroup}" Value="{x:Null}">
+                                        <Setter Property="Text" Value="芯片组详情"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="18" 
+                               FontWeight="Bold"
+                               Foreground="#0ea5e9"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding SelectedChipGroup, Converter={StaticResource NullToVisibilityConverter}}">
+                        <TextBlock.Text>
+                            <Binding Path="SelectedChipGroup.GroupName" StringFormat=" ({0})"/>
+                        </TextBlock.Text>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- 芯片详情表格 -->
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Chips}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeRows="False"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding SelectedChipGroup, Converter={StaticResource NullToVisibilityConverter}}">
+                    <DataGrid.Columns>
+                        <!-- 芯片标签号码 -->
+                        <DataGridTextColumn Header="芯片标签号码" 
+                                            Binding="{Binding LabelNumber}" 
+                                            Width="*"/>
+                        
+                        <!-- 芯片内部号码 -->
+                        <DataGridTextColumn Header="芯片内部号码" 
+                                            Binding="{Binding InternalNumber}" 
+                                            Width="*"/>
+                        
+                        <!-- 操作列 -->
+                        <DataGridTemplateColumn Header="操作" Width="140">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" 
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                        <Button Content="编辑" 
+                                                Style="{StaticResource TableEditButtonStyle}"
+                                                Command="{Binding DataContext.EditChipCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="删除" 
+                                                Style="{StaticResource TableDeleteButtonStyle}"
+                                                Command="{Binding DataContext.DeleteChipCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                
+                <!-- 未选择提示 -->
+                <TextBlock Grid.Row="1"
+                           Text="请选择上方芯片组查看详情" 
                            FontSize="14" 
                            Foreground="{StaticResource SecondaryTextColorBrush}"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding SelectedChipGroup, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+            </Grid>
+        </Border>
+        
+        <!-- 加载遮罩 -->
+        <Border Grid.RowSpan="2"
+                Background="#80ffffff"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="⏳" FontSize="32" HorizontalAlignment="Center"/>
+                <TextBlock Text="加载中..." 
+                           FontSize="14" 
+                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                           Margin="0,8,0,0"/>
             </StackPanel>
         </Border>
     </Grid>

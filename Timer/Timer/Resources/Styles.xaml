@@ -12,8 +12,8 @@
     <SolidColorBrush x:Key="BorderColorBrush" Color="#e8e8e8"/>
     <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#f0f0f0"/>
     <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#e6f7ff"/>
-    <!-- 表格表头（深色，匹配参考图） -->
-    <SolidColorBrush x:Key="TableHeaderBackgroundBrush" Color="#334155"/>
+    <!-- 表格表头（浅色） -->
+    <SolidColorBrush x:Key="TableHeaderBackgroundBrush" Color="#64748b"/>
     <SolidColorBrush x:Key="TableHeaderForegroundBrush" Color="#ffffff"/>
     <SolidColorBrush x:Key="TableRowSeparatorBrush" Color="#e5e7eb"/>
     
@@ -263,6 +263,69 @@
         <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PrimaryColorBrush}"/>
         <Setter Property="BorderThickness" Value="0,0,3,0"/>
+    </Style>
+
+    <!-- 表格操作按钮 - 编辑（蓝色） -->
+    <Style x:Key="TableEditButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#3b82f6"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Margin" Value="0,0,4,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" 
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#60a5fa"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#d9d9d9"/>
+                <Setter Property="Foreground" Value="#999999"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 表格操作按钮 - 删除（红色） -->
+    <Style x:Key="TableDeleteButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#ef4444"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" 
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#f87171"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#d9d9d9"/>
+                <Setter Property="Foreground" Value="#999999"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Expand/Collapse Animation -->

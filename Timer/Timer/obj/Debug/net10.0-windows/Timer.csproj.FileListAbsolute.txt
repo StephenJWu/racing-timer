@@ -68,3 +68,7 @@ D:\ai_coding\test2\tt\Timer\Timer\bin\Debug\net10.0-windows\runtimes\win-x64\nat
 D:\ai_coding\test2\tt\Timer\Timer\bin\Debug\net10.0-windows\runtimes\win-x86\native\e_sqlite3.dll
 D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditParticipantDialog.g.cs
 D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditParticipantDialog.baml
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipDialog.g.cs
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipGroupDialog.g.cs
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipDialog.baml
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipGroupDialog.baml

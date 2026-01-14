@@ -1,0 +1,137 @@
+<Window x:Class="Timer.Views.EditChipGroupDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:Timer.Converters"
+        Title="编辑芯片组"
+        Width="450"
+        Height="380"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter"/>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0"
+                   Text="编辑芯片组"
+                   FontSize="18"
+                   FontWeight="Bold"
+                   Foreground="{StaticResource TextColorBrush}"
+                   Margin="0,0,0,20"/>
+
+        <!-- 表单区域 -->
+        <StackPanel Grid.Row="1">
+            <!-- 芯片组名称 -->
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock Text="芯片组名称 *"
+                           FontSize="13"
+                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                           Margin="0,0,0,6"/>
+                <TextBox Text="{Binding GroupName, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         FontSize="14"/>
+            </StackPanel>
+
+            <!-- 芯片组颜色 -->
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock Text="芯片组颜色 *"
+                           FontSize="13"
+                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                           Margin="0,0,0,6"/>
+                <ComboBox ItemsSource="{Binding PredefinedColors}"
+                          SelectedItem="{Binding SelectedColor, UpdateSourceTrigger=PropertyChanged}"
+                          Height="40"
+                          FontSize="14">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Rectangle Width="24" 
+                                           Height="24" 
+                                           RadiusX="4" 
+                                           RadiusY="4"
+                                           Margin="0,0,10,0">
+                                    <Rectangle.Fill>
+                                        <Binding Path="HexColor" Converter="{StaticResource HexColorToBrushConverter}"/>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                                <TextBlock Text="{Binding Name}" 
+                                           VerticalAlignment="Center"
+                                           FontSize="14"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- 颜色预览 -->
+            <StackPanel Margin="0,0,0,16">
+                <TextBlock Text="颜色预览"
+                           FontSize="13"
+                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                           Margin="0,0,0,6"/>
+                <Border Width="100" 
+                        Height="40" 
+                        CornerRadius="4"
+                        HorizontalAlignment="Left">
+                    <Border.Background>
+                        <Binding Path="SelectedColor.HexColor" Converter="{StaticResource HexColorToBrushConverter}"/>
+                    </Border.Background>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 错误提示 -->
+        <Border Grid.Row="2"
+                Background="#fff2f0"
+                BorderBrush="#ffccc7"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="12"
+                Margin="0,0,0,16"
+                Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="请修正以下错误："
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="#cf1322"
+                           Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding ValidationErrors}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       FontSize="11"
+                                       Foreground="#cf1322"
+                                       Margin="0,2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <!-- 按钮 -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="取消"
+                    Click="CancelButton_Click"
+                    Padding="24,8"
+                    Margin="0,0,12,0"
+                    FontSize="13"/>
+            <Button Content="保存"
+                    Click="SaveButton_Click"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Padding="24,8"
+                    FontSize="13"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

@@ -113,7 +113,7 @@ namespace Timer.ViewModels
             var chipItem = new NavigationItem
             {
                 Title = "芯片设备",
-                ViewModel = new ChipViewModel()
+                ViewModel = CreateChipViewModel()
             };
             chipItem.Command = NavigateCommand;
 
@@ -199,6 +199,16 @@ namespace Timer.ViewModels
             var repository = new ParticipantRepository(_dbContext);
             var excelImportService = new ExcelImportService(repository);
             return new ParticipantViewModel(repository, excelImportService, _dbContext);
+        }
+
+        /// <summary>
+        /// 创建ChipViewModel实例（带依赖注入）
+        /// </summary>
+        private ChipViewModel CreateChipViewModel()
+        {
+            var repository = new ChipRepository(_dbContext);
+            var chipImportService = new ChipImportService(repository);
+            return new ChipViewModel(repository, chipImportService, _dbContext);
         }
 
         /// <summary>

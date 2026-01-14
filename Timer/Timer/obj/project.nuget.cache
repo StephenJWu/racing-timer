@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Mobj+VmPaaY=",
+  "dgSpecHash": "wOX9N4SQ+7k=",
   "success": true,
   "projectFilePath": "D:\\ai_coding\\test2\\tt\\Timer\\Timer\\Timer.csproj",
   "expectedPackageFiles": [
@@ -11,7 +11,6 @@
     "C:\\Users\\karson\\.nuget\\packages\\irony.netcore\\1.0.11\\irony.netcore.1.0.11.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\microsoft.data.sqlite\\8.0.0\\microsoft.data.sqlite.8.0.0.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.0\\microsoft.data.sqlite.core.8.0.0.nupkg.sha512",
-    "C:\\Users\\karson\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.1\\microsoft.net.illink.tasks.10.0.1.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\netstandard.library\\1.6.1\\netstandard.library.1.6.1.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\sixlabors.fonts\\1.0.0\\sixlabors.fonts.1.0.0.nupkg.sha512",
@@ -19,10 +18,7 @@
     "C:\\Users\\karson\\.nuget\\packages\\sqlitepclraw.core\\2.1.6\\sqlitepclraw.core.2.1.6.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\sqlitepclraw.lib.e_sqlite3\\2.1.6\\sqlitepclraw.lib.e_sqlite3.2.1.6.nupkg.sha512",
     "C:\\Users\\karson\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.6\\sqlitepclraw.provider.e_sqlite3.2.1.6.nupkg.sha512",
-    "C:\\Users\\karson\\.nuget\\packages\\xlparser\\1.5.2\\xlparser.1.5.2.nupkg.sha512",
-    "C:\\Users\\karson\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.1\\microsoft.netcore.app.runtime.win-x64.10.0.1.nupkg.sha512",
-    "C:\\Users\\karson\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.1\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.1.nupkg.sha512",
-    "C:\\Users\\karson\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.1\\microsoft.aspnetcore.app.runtime.win-x64.10.0.1.nupkg.sha512"
+    "C:\\Users\\karson\\.nuget\\packages\\xlparser\\1.5.2\\xlparser.1.5.2.nupkg.sha512"
   ],
   "logs": []
 }

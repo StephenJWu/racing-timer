@@ -1,7 +1,10 @@
-﻿D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\GeneratedInternalTypeHelper.g.cs
+﻿
 
 FD:\ai_coding\test2\tt\Timer\Timer\MainWindow.xaml;;
 FD:\ai_coding\test2\tt\Timer\Timer\Resources\Styles.xaml;;
+FD:\ai_coding\test2\tt\Timer\Timer\Views\ChipView.xaml;;
+FD:\ai_coding\test2\tt\Timer\Timer\Views\EditChipDialog.xaml;;
+FD:\ai_coding\test2\tt\Timer\Timer\Views\EditChipGroupDialog.xaml;;
 FD:\ai_coding\test2\tt\Timer\Timer\Views\EditParticipantDialog.xaml;;
 FD:\ai_coding\test2\tt\Timer\Timer\Views\ParticipantView.xaml;;
 

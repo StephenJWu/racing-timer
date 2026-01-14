@@ -15,7 +15,13 @@ namespace Timer.Converters
         /// </summary>
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value != null ? Visibility.Visible : Visibility.Collapsed;
+            var isVisible = value != null;
+            // 如果 parameter 是 "Invert"，则反转可见性
+            if (parameter is string param && param == "Invert")
+            {
+                isVisible = !isVisible;
+            }
+            return isVisible ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>
