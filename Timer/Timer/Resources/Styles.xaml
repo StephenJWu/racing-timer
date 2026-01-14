@@ -229,24 +229,49 @@
         <Setter Property="FontSize" Value="14"/>
     </Style>
 
-    <!-- DataGrid单元格样式（细分隔线） -->
-    <Style TargetType="DataGridCell">
-        <Setter Property="BorderBrush" Value="{StaticResource TableRowSeparatorBrush}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-
     <!-- DataGrid行样式 -->
     <Style TargetType="DataGridRow">
         <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
-        <!-- 只在Cell画分隔线，Row不再画线，避免“每行两条横线” -->
+        <Setter Property="Background" Value="Transparent"/>
+        <!-- 只在Cell画分隔线，Row不再画线，避免"每行两条横线" -->
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}"/>
+                <Setter Property="Background" Value="#f5f5f5"/>
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{StaticResource SelectedBackgroundBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    
+    <!-- DataGridCell 选中样式（去除默认蓝色高亮） -->
+    <Style TargetType="DataGridCell">
+        <Setter Property="BorderBrush" Value="{StaticResource TableRowSeparatorBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="8,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource TableRowSeparatorBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>

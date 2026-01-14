@@ -11,6 +11,7 @@ namespace Timer.Models
     {
         private string _title = string.Empty;
         private string? _icon;
+        private string _iconColor = "#60a5fa";
         private bool _isExpanded;
         private bool _isSelected;
         private object? _viewModel;
@@ -31,6 +32,15 @@ namespace Timer.Models
         {
             get => _icon;
             set => SetProperty(ref _icon, value);
+        }
+
+        /// <summary>
+        /// 图标颜色（十六进制颜色值）
+        /// </summary>
+        public string IconColor
+        {
+            get => _iconColor;
+            set => SetProperty(ref _iconColor, value);
         }
 
         /// <summary>

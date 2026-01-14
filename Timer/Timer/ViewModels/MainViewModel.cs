@@ -59,6 +59,8 @@ namespace Timer.ViewModels
             var raceTimerItem = new NavigationItem
             {
                 Title = "比赛计时",
+                Icon = "⏱️",
+                IconColor = "#f97316",  // 橙色
                 ViewModel = new RaceTimerViewModel()
             };
             raceTimerItem.Command = NavigateCommand;
@@ -67,6 +69,8 @@ namespace Timer.ViewModels
             var scoreItem = new NavigationItem
             {
                 Title = "成绩管理",
+                Icon = "📊",
+                IconColor = "#22c55e",  // 绿色
                 ViewModel = new ScoreViewModel()
             };
             scoreItem.Command = NavigateCommand;
@@ -75,12 +79,16 @@ namespace Timer.ViewModels
             var participantManagementItem = new NavigationItem
             {
                 Title = "人员管理",
+                Icon = "👥",
+                IconColor = "#a855f7",  // 紫色
                 ViewModel = null
             };
 
             var participantItem = new NavigationItem
             {
                 Title = "参赛人员",
+                Icon = "👤",
+                IconColor = "#ec4899",  // 粉色
                 ViewModel = CreateParticipantViewModel()
             };
             participantItem.Command = NavigateCommand;
@@ -88,6 +96,8 @@ namespace Timer.ViewModels
             var groupItem = new NavigationItem
             {
                 Title = "人员分组",
+                Icon = "📋",
+                IconColor = "#8b5cf6",  // 浅紫色
                 ViewModel = new GroupViewModel()
             };
             groupItem.Command = NavigateCommand;
@@ -100,12 +110,16 @@ namespace Timer.ViewModels
             var deviceManagementItem = new NavigationItem
             {
                 Title = "设备管理",
+                Icon = "🔧",
+                IconColor = "#06b6d4",  // 青色
                 ViewModel = null
             };
 
             var deviceItem = new NavigationItem
             {
                 Title = "扫描设备",
+                Icon = "📡",
+                IconColor = "#14b8a6",  // 蓝绿色
                 ViewModel = new DeviceViewModel()
             };
             deviceItem.Command = NavigateCommand;
@@ -113,6 +127,8 @@ namespace Timer.ViewModels
             var chipItem = new NavigationItem
             {
                 Title = "芯片设备",
+                Icon = "💳",
+                IconColor = "#3b82f6",  // 蓝色
                 ViewModel = CreateChipViewModel()
             };
             chipItem.Command = NavigateCommand;

@@ -29,118 +29,145 @@
 
         <!-- 表单区域 -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
                 <!-- 比赛日期 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="比赛日期 *"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <DatePicker SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}"
-                                Width="280"
-                                Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="比赛日期 *"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <DatePicker Grid.Row="0" Grid.Column="1"
+                            SelectedDate="{Binding Date, UpdateSourceTrigger=PropertyChanged}"
+                            Height="36"
+                            Margin="0,0,0,12"/>
 
                 <!-- 学校 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="学校"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding School, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="学校"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="1" Grid.Column="1"
+                         Text="{Binding School, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 年级 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="年级"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Grade, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="年级"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="2" Grid.Column="1"
+                         Text="{Binding Grade, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 班级 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="班级"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Class, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="3" Grid.Column="0"
+                           Text="班级"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="3" Grid.Column="1"
+                         Text="{Binding Class, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 姓名 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="姓名 *"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="姓名 *"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="4" Grid.Column="1"
+                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 性别 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="性别 *"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding GenderOptions}"
-                              SelectedItem="{Binding Gender, UpdateSourceTrigger=PropertyChanged}"
-                              Width="280"
-                              Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="5" Grid.Column="0"
+                           Text="性别 *"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <ComboBox Grid.Row="5" Grid.Column="1"
+                          ItemsSource="{Binding GenderOptions}"
+                          SelectedItem="{Binding Gender, UpdateSourceTrigger=PropertyChanged}"
+                          Height="36"
+                          Margin="0,0,0,12"/>
 
                 <!-- 准考证号 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="准考证号"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding ExamNumber, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="6" Grid.Column="0"
+                           Text="准考证号"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="6" Grid.Column="1"
+                         Text="{Binding ExamNumber, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 组别 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="组别"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding GroupName, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="7" Grid.Column="0"
+                           Text="组别"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="7" Grid.Column="1"
+                         Text="{Binding GroupName, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 号码布 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="号码布"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding BibNumber, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
+                <TextBlock Grid.Row="8" Grid.Column="0"
+                           Text="号码布"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="8" Grid.Column="1"
+                         Text="{Binding BibNumber, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
 
                 <!-- 芯片编号 -->
-                <StackPanel Margin="0,0,0,16">
-                    <TextBlock Text="芯片编号"
-                               FontSize="12"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"
-                               Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding ChipNumber, UpdateSourceTrigger=PropertyChanged}"
-                             Width="280"
-                             Height="32"/>
-                </StackPanel>
-            </StackPanel>
+                <TextBlock Grid.Row="9" Grid.Column="0"
+                           Text="芯片编号"
+                           FontSize="13"
+                           Foreground="{StaticResource TextColorBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,12"/>
+                <TextBox Grid.Row="9" Grid.Column="1"
+                         Text="{Binding ChipNumber, UpdateSourceTrigger=PropertyChanged}"
+                         Height="36"
+                         Margin="0,0,0,12"/>
+            </Grid>
         </ScrollViewer>
 
         <!-- 错误提示 -->
