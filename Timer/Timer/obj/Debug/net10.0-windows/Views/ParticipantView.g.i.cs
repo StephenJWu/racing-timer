@@ -53,7 +53,7 @@ namespace Timer.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/Timer;component/views/participantview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/Timer;V1.0.0.0;component/views/participantview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\ParticipantView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
