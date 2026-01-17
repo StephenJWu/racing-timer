@@ -98,7 +98,7 @@ namespace Timer.ViewModels
                 Title = "人员分组",
                 Icon = "📋",
                 IconColor = "#8b5cf6",  // 浅紫色
-                ViewModel = new GroupViewModel()
+                ViewModel = CreateGroupViewModel()
             };
             groupItem.Command = NavigateCommand;
 
@@ -225,6 +225,18 @@ namespace Timer.ViewModels
             var repository = new ChipRepository(_dbContext);
             var chipImportService = new ChipImportService(repository);
             return new ChipViewModel(repository, chipImportService, _dbContext);
+        }
+
+        /// <summary>
+        /// 创建GroupViewModel实例（带依赖注入）
+        /// </summary>
+        private GroupViewModel CreateGroupViewModel()
+        {
+            var participantRepo = new ParticipantRepository(_dbContext);
+            var chipRepo = new ChipRepository(_dbContext);
+            var raceGroupRepo = new RaceGroupRepository(_dbContext);
+            var exportService = new RaceGroupExportService();
+            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService);
         }
 
         /// <summary>

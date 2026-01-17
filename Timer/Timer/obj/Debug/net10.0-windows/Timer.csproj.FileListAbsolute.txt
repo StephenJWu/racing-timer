@@ -72,3 +72,8 @@ D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipDialog
 D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipGroupDialog.g.cs
 D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipDialog.baml
 D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditChipGroupDialog.baml
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Timer.sourcelink.json
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditRaceGroupDialog.g.cs
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditRaceGroupDialog.baml
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditGroupMemberDialog.baml
+D:\ai_coding\test2\tt\Timer\Timer\obj\Debug\net10.0-windows\Views\EditGroupMemberDialog.g.cs

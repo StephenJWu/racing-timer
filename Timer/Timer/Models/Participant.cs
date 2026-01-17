@@ -81,6 +81,16 @@ namespace Timer.Models
         /// UI选择状态（用于批量操作），不持久化到数据库
         /// </summary>
         public bool IsSelected { get; set; }
+
+        /// <summary>
+        /// 芯片内部号码（非持久化属性，用于UI显示）
+        /// </summary>
+        public string? ChipInternalNumber { get; set; }
+
+        /// <summary>
+        /// 组内序号（非持久化属性，用于UI显示）
+        /// </summary>
+        public int GroupSequenceNumber { get; set; }
     }
 }
 

@@ -95,6 +95,23 @@ namespace Timer.Data
 
                 CREATE INDEX IF NOT EXISTS idx_chips_chipgroupid ON Chips(ChipGroupId);
                 CREATE INDEX IF NOT EXISTS idx_chips_labelnumber ON Chips(LabelNumber);
+
+                CREATE TABLE IF NOT EXISTS RaceGroups (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    School TEXT NOT NULL,
+                    Grade TEXT,
+                    Class TEXT,
+                    GroupName TEXT NOT NULL,
+                    ChipGroupId INTEGER,
+                    RaceLaps INTEGER DEFAULT 1,
+                    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(ChipGroupId) REFERENCES ChipGroups(Id),
+                    UNIQUE(School, Grade, Class, GroupName)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_racegroups_school ON RaceGroups(School);
+                CREATE INDEX IF NOT EXISTS idx_racegroups_chipgroupid ON RaceGroups(ChipGroupId);
             ";
 
             await command.ExecuteNonQueryAsync();
