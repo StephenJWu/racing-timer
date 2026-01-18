@@ -265,6 +265,40 @@
                                 </Style>
                             </Button.Style>
                         </Button>
+
+                        <!-- 快速记圈输入区 -->
+                        <Border BorderBrush="{StaticResource BorderColorBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="12"
+                                Margin="0,20,0,0"
+                                Background="#f0f9ff"
+                                Visibility="{Binding IsRaceActive, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="快速记圈" 
+                                           FontSize="14" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextColorBrush}"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="输入号码布（芯片标签号）" 
+                                           FontSize="11" 
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                                           Margin="0,0,0,8"/>
+                                <TextBox Text="{Binding QuickLapInput, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="36"
+                                         FontSize="14"
+                                         Margin="0,0,0,8">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Enter" Command="{Binding QuickRecordLapCommand}"/>
+                                    </TextBox.InputBindings>
+                                </TextBox>
+                                <Button Content="记圈 (Enter)"
+                                        Command="{Binding QuickRecordLapCommand}"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Height="36"
+                                        FontSize="13"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>

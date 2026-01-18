@@ -249,24 +249,11 @@
     <Style TargetType="DataGridCell">
         <Setter Property="BorderBrush" Value="{StaticResource TableRowSeparatorBrush}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="Padding" Value="8,0"/>
+        <Setter Property="Padding" Value="8,6"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="DataGridCell">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="Transparent"/>
@@ -382,124 +369,5 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
-
-    <!-- ==================== 对话框公共样式 ==================== -->
-    
-    <!-- 对话框窗口样式 -->
-    <Style x:Key="DialogWindowStyle" TargetType="Window">
-        <Setter Property="ResizeMode" Value="NoResize"/>
-        <Setter Property="WindowStartupLocation" Value="CenterOwner"/>
-        <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
-    </Style>
-    
-    <!-- 对话框标题样式 -->
-    <Style x:Key="DialogTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="18"/>
-        <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
-        <Setter Property="Margin" Value="0,0,0,20"/>
-    </Style>
-    
-    <!-- 表单标签样式 -->
-    <Style x:Key="FormLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
-    </Style>
-    
-    <!-- 表单标签样式（用于Grid布局，带右边距） -->
-    <Style x:Key="FormLabelGridStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{StaticResource TextColorBrush}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
-    
-    <!-- 表单字段容器样式 -->
-    <Style x:Key="FormFieldStyle" TargetType="StackPanel">
-        <Setter Property="Margin" Value="0,0,0,16"/>
-    </Style>
-    
-    <!-- 表单字段容器样式（大间距） -->
-    <Style x:Key="FormFieldLargeStyle" TargetType="StackPanel">
-        <Setter Property="Margin" Value="0,0,0,20"/>
-    </Style>
-    
-    <!-- 只读文本框样式 -->
-    <Style x:Key="ReadOnlyTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-        <Setter Property="IsReadOnly" Value="True"/>
-        <Setter Property="Background" Value="#f5f5f5"/>
-        <Setter Property="Height" Value="40"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="10,0"/>
-    </Style>
-    
-    <!-- 表单输入框样式 -->
-    <Style x:Key="FormTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-        <Setter Property="Height" Value="36"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
-    
-    <!-- 表单下拉框样式 -->
-    <Style x:Key="FormComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-        <Setter Property="Height" Value="40"/>
-        <Setter Property="FontSize" Value="14"/>
-    </Style>
-    
-    <!-- 表单日期选择器样式 -->
-    <Style x:Key="FormDatePickerStyle" TargetType="DatePicker" BasedOn="{StaticResource {x:Type DatePicker}}">
-        <Setter Property="Height" Value="36"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
-    
-    <!-- 验证错误提示样式 -->
-    <Style x:Key="ValidationErrorBorderStyle" TargetType="Border">
-        <Setter Property="Background" Value="#fff2f0"/>
-        <Setter Property="BorderBrush" Value="#ffccc7"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="Margin" Value="0,0,0,16"/>
-    </Style>
-    
-    <!-- 验证错误标题样式 -->
-    <Style x:Key="ValidationErrorTitleStyle" TargetType="TextBlock">
-        <Setter Property="Text" Value="请修正以下错误："/>
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="#cf1322"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
-    </Style>
-    
-    <!-- 验证错误项样式 -->
-    <Style x:Key="ValidationErrorItemStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="11"/>
-        <Setter Property="Foreground" Value="#cf1322"/>
-        <Setter Property="Margin" Value="0,2"/>
-    </Style>
-    
-    <!-- 对话框按钮区样式 -->
-    <Style x:Key="DialogButtonPanelStyle" TargetType="StackPanel">
-        <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-    </Style>
-    
-    <!-- 对话框保存按钮样式 -->
-    <Style x:Key="DialogSaveButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-        <Setter Property="Width" Value="80"/>
-    </Style>
-    
-    <!-- 对话框取消按钮样式 -->
-    <Style x:Key="DialogCancelButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
-        <Setter Property="Width" Value="80"/>
-        <Setter Property="Margin" Value="0,0,12,0"/>
-    </Style>
-    
-    <!-- 验证错误列表模板 -->
-    <DataTemplate x:Key="ValidationErrorTemplate">
-        <TextBlock Text="{Binding}" Style="{StaticResource ValidationErrorItemStyle}"/>
-    </DataTemplate>
 
 </ResourceDictionary>

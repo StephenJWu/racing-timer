@@ -162,17 +162,6 @@ namespace Timer.ViewModels
             }
         }
 
-        /// <summary>
-        /// 公开的刷新方法，供页面加载时调用
-        /// </summary>
-        public async Task RefreshAsync()
-        {
-            if (!IsRaceActive)
-            {
-                await LoadRaceGroupsAsync();
-            }
-        }
-
         private async Task LoadRaceGroupsAsync()
         {
             try
@@ -375,15 +364,10 @@ namespace Timer.ViewModels
                 participant.LapTimes.Add(TimeSpan.FromMilliseconds(lapRecord.LapTime));
                 participant.NotifyAllLapsChanged();
 
-                // 更新状态
+                // 检查是否完成比赛
                 if (participant.CurrentLap >= TotalLaps)
                 {
                     participant.IsCompleted = true;
-                    participant.Status = "已完成";
-                }
-                else
-                {
-                    participant.Status = "进行中";
                 }
 
                 // 更新所有参赛者的排名
@@ -524,8 +508,6 @@ namespace Timer.ViewModels
             PauseRaceCommand.NotifyCanExecuteChanged();
             ResumeRaceCommand.NotifyCanExecuteChanged();
             StopRaceCommand.NotifyCanExecuteChanged();
-            RecordLapCommand.NotifyCanExecuteChanged();
-            QuickRecordLapCommand.NotifyCanExecuteChanged();
         }
 
         private void UpdateStatusDisplay()
