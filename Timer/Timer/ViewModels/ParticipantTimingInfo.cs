@@ -1,0 +1,91 @@
+using System;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace Timer.ViewModels
+{
+    /// <summary>
+    /// 参赛者计时信息，用于UI显示
+    /// </summary>
+    public partial class ParticipantTimingInfo : ObservableObject
+    {
+        [ObservableProperty]
+        private int _participantId;
+
+        [ObservableProperty]
+        private int _rank;
+
+        [ObservableProperty]
+        private string _bibNumber = string.Empty;
+
+        [ObservableProperty]
+        private string _name = string.Empty;
+
+        [ObservableProperty]
+        private string? _chipNumber;
+
+        [ObservableProperty]
+        private int _currentLap;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(TotalTimeFormatted))]
+        private TimeSpan _totalTime;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(LastLapTimeFormatted))]
+        private TimeSpan? _lastLapTime;
+
+        [ObservableProperty]
+        private string _status = "未开始";
+
+        [ObservableProperty]
+        private bool _isLeading;
+
+        [ObservableProperty]
+        private bool _isCompleted;
+
+        /// <summary>
+        /// 格式化显示的累计用时
+        /// </summary>
+        public string TotalTimeFormatted => FormatTimeSpan(_totalTime);
+
+        /// <summary>
+        /// 格式化显示的最后一圈用时
+        /// </summary>
+        public string LastLapTimeFormatted => _lastLapTime.HasValue ? FormatTimeSpan(_lastLapTime.Value) : "-";
+
+        /// <summary>
+        /// 格式化时间显示（HH:MM:SS.fff）
+        /// </summary>
+        private string FormatTimeSpan(TimeSpan time)
+        {
+            return $"{(int)time.TotalHours:D2}:{time.Minutes:D2}:{time.Seconds:D2}.{time.Milliseconds:D3}";
+        }
+
+        partial void OnCurrentLapChanged(int value)
+        {
+            UpdateStatus();
+        }
+
+        partial void OnIsCompletedChanged(bool value)
+        {
+            UpdateStatus();
+        }
+
+        private void UpdateStatus()
+        {
+            if (_isCompleted)
+            {
+                Status = "已完成";
+            }
+            else if (_currentLap > 0)
+            {
+                Status = "进行中";
+            }
+            else
+            {
+                Status = "未开始";
+            }
+        }
+    }
+}
+

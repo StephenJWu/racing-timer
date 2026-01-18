@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using Timer.ViewModels;
 
 namespace Timer.Views
 {
@@ -8,6 +9,10 @@ namespace Timer.Views
         {
             InitializeComponent();
         }
+
+        public RaceTimerView(RaceTimerViewModel viewModel) : this()
+        {
+            DataContext = viewModel;
+        }
     }
 }
-

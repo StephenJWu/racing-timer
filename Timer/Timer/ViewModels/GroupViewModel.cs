@@ -158,7 +158,21 @@ namespace Timer.ViewModels
         public RaceGroup? SelectedRaceGroup
         {
             get => _selectedRaceGroup;
-            set => SetProperty(ref _selectedRaceGroup, value);
+            set
+            {
+                if (SetProperty(ref _selectedRaceGroup, value))
+                {
+                    // 当选中项变化时，自动加载分组详情
+                    if (value != null)
+                    {
+                        _ = SelectRaceGroupAsync(value);
+                    }
+                    else
+                    {
+                        Participants.Clear();
+                    }
+                }
+            }
         }
 
         public ObservableCollection<Participant> Participants { get; }
@@ -351,8 +365,6 @@ namespace Timer.ViewModels
                 return;
             }
 
-            SelectedRaceGroup = raceGroup;
-
             try
             {
                 // 加载分组内的参赛人员
@@ -396,11 +408,10 @@ namespace Timer.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    // 更新数据库中的芯片组和圈数
-                    await _raceGroupRepository.UpdateChipGroupAndLapsAsync(
+                    // 更新数据库中的芯片组
+                    await _raceGroupRepository.UpdateChipGroupAsync(
                         raceGroup.Id,
-                        raceGroup.ChipGroupId!.Value,
-                        raceGroup.RaceLaps);
+                        raceGroup.ChipGroupId!.Value);
 
                     // 为分组内人员分配芯片
                     var assignedCount = await _raceGroupRepository.AssignChipsToParticipantsAsync(

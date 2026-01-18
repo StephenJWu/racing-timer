@@ -122,6 +122,63 @@ namespace Timer.Services
         }
 
         /// <summary>
+        /// 获取所有比赛分组
+        /// </summary>
+        public async Task<List<RaceGroup>> GetAllAsync()
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+            var command = connection.CreateCommand();
+
+            command.CommandText = @"
+                SELECT 
+                    rg.Id,
+                    rg.School,
+                    rg.Grade,
+                    rg.Class,
+                    rg.GroupName,
+                    rg.ChipGroupId,
+                    rg.RaceLaps,
+                    rg.CreatedAt,
+                    rg.UpdatedAt,
+                    cg.GroupName as ChipGroupName,
+                    cg.Color as ChipGroupColor
+                FROM RaceGroups rg
+                LEFT JOIN ChipGroups cg ON rg.ChipGroupId = cg.Id
+                ORDER BY rg.School, rg.Grade, rg.Class, rg.GroupName
+            ";
+
+            var raceGroups = new List<RaceGroup>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                raceGroups.Add(MapToRaceGroup(reader));
+            }
+
+            // 查询每个分组的参赛人员数量
+            foreach (var raceGroup in raceGroups)
+            {
+                var countCommand = connection.CreateCommand();
+                countCommand.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM Participants 
+                    WHERE School = @school 
+                        AND (Grade = @grade OR (@grade IS NULL AND Grade IS NULL))
+                        AND (Class = @class OR (@class IS NULL AND Class IS NULL))
+                        AND GroupName = @groupName
+                ";
+                countCommand.Parameters.AddWithValue("@school", raceGroup.School);
+                countCommand.Parameters.AddWithValue("@grade", (object?)raceGroup.Grade ?? DBNull.Value);
+                countCommand.Parameters.AddWithValue("@class", (object?)raceGroup.Class ?? DBNull.Value);
+                countCommand.Parameters.AddWithValue("@groupName", raceGroup.GroupName);
+
+                var count = await countCommand.ExecuteScalarAsync();
+                raceGroup.ParticipantCount = count != null ? Convert.ToInt32(count) : 0;
+            }
+
+            return raceGroups;
+        }
+
+        /// <summary>
         /// 根据ID获取单个分组
         /// </summary>
         public async Task<RaceGroup?> GetByIdAsync(int id)
@@ -248,9 +305,9 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 更新分组的芯片组和比赛圈数
+        /// 更新分组的芯片组
         /// </summary>
-        public async Task<bool> UpdateChipGroupAndLapsAsync(int id, int chipGroupId, int raceLaps)
+        public async Task<bool> UpdateChipGroupAsync(int id, int chipGroupId)
         {
             if (id <= 0)
             {
@@ -262,23 +319,17 @@ namespace Timer.Services
                 throw new ArgumentException("ChipGroupId must be greater than 0", nameof(chipGroupId));
             }
 
-            if (raceLaps < 1 || raceLaps > 20)
-            {
-                throw new ArgumentException("RaceLaps must be between 1 and 20", nameof(raceLaps));
-            }
-
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
             command.CommandText = @"
                 UPDATE RaceGroups
-                SET ChipGroupId = @chipGroupId, RaceLaps = @raceLaps, UpdatedAt = @updatedAt
+                SET ChipGroupId = @chipGroupId, UpdatedAt = @updatedAt
                 WHERE Id = @id
             ";
 
             command.Parameters.Add(new SqliteParameter("@id", id));
             command.Parameters.Add(new SqliteParameter("@chipGroupId", chipGroupId));
-            command.Parameters.Add(new SqliteParameter("@raceLaps", raceLaps));
             command.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
 
             var rowsAffected = await command.ExecuteNonQueryAsync();

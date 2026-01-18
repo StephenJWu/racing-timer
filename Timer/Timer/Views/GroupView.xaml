@@ -106,16 +106,6 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     
-                    <DataGridTemplateColumn Header="圈数" Width="80">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock HorizontalAlignment="Center">
-                                    <Run Text="{Binding RaceLaps}"/><Run Text="圈"/>
-                                </TextBlock>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    
                     <DataGridTextColumn Header="数量" Binding="{Binding ParticipantCount}" Width="80"/>
                     
                     <!-- 操作列 -->

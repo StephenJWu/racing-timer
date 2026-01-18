@@ -61,7 +61,7 @@ namespace Timer.ViewModels
                 Title = "比赛计时",
                 Icon = "⏱️",
                 IconColor = "#f97316",  // 橙色
-                ViewModel = new RaceTimerViewModel()
+                ViewModel = CreateRaceTimerViewModel()
             };
             raceTimerItem.Command = NavigateCommand;
 
@@ -237,6 +237,19 @@ namespace Timer.ViewModels
             var raceGroupRepo = new RaceGroupRepository(_dbContext);
             var exportService = new RaceGroupExportService();
             return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService);
+        }
+
+        /// <summary>
+        /// 创建RaceTimerViewModel实例（带依赖注入）
+        /// </summary>
+        private RaceTimerViewModel CreateRaceTimerViewModel()
+        {
+            var raceGroupRepo = new RaceGroupRepository(_dbContext);
+            var participantRepo = new ParticipantRepository(_dbContext);
+            var raceRecordRepo = new RaceRecordRepository(_dbContext);
+            var lapRecordRepo = new LapRecordRepository(_dbContext);
+            var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
+            return new RaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _dbContext);
         }
 
         /// <summary>

@@ -112,6 +112,39 @@ namespace Timer.Data
 
                 CREATE INDEX IF NOT EXISTS idx_racegroups_school ON RaceGroups(School);
                 CREATE INDEX IF NOT EXISTS idx_racegroups_chipgroupid ON RaceGroups(ChipGroupId);
+
+                CREATE TABLE IF NOT EXISTS RaceRecords (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    RaceGroupId INTEGER NOT NULL,
+                    StartTime TEXT NOT NULL,
+                    EndTime TEXT,
+                    Status TEXT NOT NULL CHECK(Status IN ('Running', 'Paused', 'Completed', 'Stopped')),
+                    TotalLaps INTEGER NOT NULL,
+                    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(RaceGroupId) REFERENCES RaceGroups(Id)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_racerecords_racegroupid ON RaceRecords(RaceGroupId);
+                CREATE INDEX IF NOT EXISTS idx_racerecords_status ON RaceRecords(Status);
+
+                CREATE TABLE IF NOT EXISTS LapRecords (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    RaceRecordId INTEGER NOT NULL,
+                    ParticipantId INTEGER NOT NULL,
+                    ChipNumber TEXT,
+                    LapNumber INTEGER NOT NULL,
+                    PassTime TEXT NOT NULL,
+                    LapTime INTEGER NOT NULL,
+                    TotalTime INTEGER NOT NULL,
+                    Rank INTEGER,
+                    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(RaceRecordId) REFERENCES RaceRecords(Id) ON DELETE CASCADE,
+                    FOREIGN KEY(ParticipantId) REFERENCES Participants(Id)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_laprecords_racerecordid ON LapRecords(RaceRecordId);
+                CREATE INDEX IF NOT EXISTS idx_laprecords_participantid ON LapRecords(ParticipantId);
+                CREATE INDEX IF NOT EXISTS idx_laprecords_chipnumber ON LapRecords(ChipNumber);
             ";
 
             await command.ExecuteNonQueryAsync();

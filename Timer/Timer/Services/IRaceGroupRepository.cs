@@ -28,6 +28,12 @@ namespace Timer.Services
             string? groupName = null);
 
         /// <summary>
+        /// 获取所有比赛分组
+        /// </summary>
+        /// <returns>所有分组列表</returns>
+        Task<List<RaceGroup>> GetAllAsync();
+
+        /// <summary>
         /// 根据ID获取单个分组
         /// </summary>
         /// <param name="id">分组ID</param>
@@ -49,13 +55,12 @@ namespace Timer.Services
             string groupName);
 
         /// <summary>
-        /// 更新分组的芯片组和比赛圈数
+        /// 更新分组的芯片组
         /// </summary>
         /// <param name="id">分组ID</param>
         /// <param name="chipGroupId">芯片组ID</param>
-        /// <param name="raceLaps">比赛圈数</param>
         /// <returns>是否更新成功</returns>
-        Task<bool> UpdateChipGroupAndLapsAsync(int id, int chipGroupId, int raceLaps);
+        Task<bool> UpdateChipGroupAsync(int id, int chipGroupId);
 
         /// <summary>
         /// 为分组内的所有参赛人员分配芯片
@@ -80,5 +85,6 @@ namespace Timer.Services
             string groupName);
     }
 }
+
 
 
