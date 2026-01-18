@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Timer.Models;
+using Timer.Messages;
 using Timer.Services;
 
 namespace Timer.ViewModels
@@ -13,7 +16,7 @@ namespace Timer.ViewModels
     /// <summary>
     /// 多组比赛计时页面的ViewModel，支持多个比赛组同时进行
     /// </summary>
-    public partial class MultiRaceTimerViewModel : ObservableObject, IDisposable
+    public partial class MultiRaceTimerViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IRaceGroupRepository _raceGroupRepository;
         private readonly IParticipantRepository _participantRepository;
@@ -47,15 +50,6 @@ namespace Timer.ViewModels
         [ObservableProperty]
         private string _quickLapInput = string.Empty;
 
-        [ObservableProperty]
-        private ObservableCollection<int> _lapOptions = new();
-
-        /// <summary>
-        /// 选择的圈数
-        /// </summary>
-        [ObservableProperty]
-        private int _selectedLaps = 1;
-
         /// <summary>
         /// 选中的比赛组数量
         /// </summary>
@@ -87,14 +81,108 @@ namespace Timer.ViewModels
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
             _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
 
-            // 初始化圈数选项（1-20圈）
-            for (int i = 1; i <= 20; i++)
+            // 加载可用分组 + 注册跨页面实时刷新（显式注册，避免多 IRecipient<> 时 Register(this) 歧义）
+            WeakReferenceMessenger.Default.Register<ChipGroupUpdatedMessage>(this);
+            WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
+            _ = InitializeAsync();
+        }
+
+        public void Receive(ChipGroupUpdatedMessage message)
+        {
+            if (message?.Value == null) return;
+            var updated = message.Value;
+
+            // 可用分组列表（RaceGroup）
+            foreach (var g in AvailableRaceGroups.Where(r => r.ChipGroupId == updated.Id))
             {
-                LapOptions.Add(i);
+                g.ChipGroupName = updated.GroupName;
+                g.ChipGroupColor = updated.Color;
             }
 
-            // 加载可用分组
-            _ = InitializeAsync();
+            // 已添加到比赛的分组（RaceGroupTimingInfo）
+            foreach (var g in RaceGroups.Where(r => r.RaceGroupId > 0 && r.ChipGroupName != null))
+            {
+                // RaceGroupTimingInfo 没有 ChipGroupId，按名称/颜色不可靠；改为通过 AvailableRaceGroups 的映射更稳
+                // 如果未来需要更强一致性，建议在 TimingInfo 增加 ChipGroupId。
+            }
+
+            // 通过 RaceGroupId 反查当前 TimingInfo 对应的 RaceGroup，再更新 TimingInfo 的颜色/名称
+            foreach (var timing in RaceGroups)
+            {
+                var rg = AvailableRaceGroups.FirstOrDefault(x => x.Id == timing.RaceGroupId);
+                if (rg != null && rg.ChipGroupId == updated.Id)
+                {
+                    timing.ChipGroupName = updated.GroupName;
+                    timing.ChipGroupColor = updated.Color;
+                }
+            }
+        }
+
+        public void Receive(DataReloadRequestedMessage message)
+        {
+            if (message == null) return;
+
+            if (message.Value == DataDomain.RaceGroups)
+            {
+                _ = LoadAvailableGroupsAsync();
+            }
+            else if (message.Value == DataDomain.Participants)
+            {
+                _ = RefreshParticipantsForActiveGroupsAsync();
+            }
+        }
+
+        private async Task RefreshParticipantsForActiveGroupsAsync()
+        {
+            // 逐个分组刷新参赛者“身份信息”（号码布/姓名/芯片号）
+            foreach (var group in RaceGroups.ToList())
+            {
+                // 比赛未开始：可直接全量重载
+                if (!group.IsRaceActive && group.Status == RaceStatus.Stopped)
+                {
+                    await LoadParticipantsForGroupAsync(group);
+                    continue;
+                }
+
+                // 比赛进行中/已暂停/已完成：仅更新显示字段，避免重置圈次与计时
+                await RefreshParticipantIdentityOnlyAsync(group);
+            }
+        }
+
+        private async Task RefreshParticipantIdentityOnlyAsync(RaceGroupTimingInfo group)
+        {
+            try
+            {
+                var searchFilter = new SearchFilter
+                {
+                    School = group.School,
+                    Grade = group.Grade,
+                    Class = group.Class,
+                    GroupName = group.GroupName,
+                    PageNumber = 1,
+                    PageSize = 1000
+                };
+
+                var participants = (await _participantRepository.GetAllAsync(searchFilter)).ToList();
+                var map = participants.ToDictionary(p => p.Id, p => p);
+
+                foreach (var p in group.Participants)
+                {
+                    if (map.TryGetValue(p.ParticipantId, out var latest))
+                    {
+                        p.BibNumber = latest.BibNumber ?? "-";
+                        p.Name = latest.Name;
+                        p.ChipNumber = latest.ChipNumber;
+                    }
+                }
+
+                // 参赛人数变化：比赛进行中不强行增删，避免影响计时；仅更新显示统计
+                group.ParticipantCount = group.Participants.Count;
+            }
+            catch
+            {
+                // 静默：实时刷新失败不应打扰用户
+            }
         }
 
         /// <summary>
@@ -209,7 +297,8 @@ namespace Timer.ViewModels
                 IsLoading = true;
 
                 var group = SelectedAvailableGroup;
-                var timingInfo = CreateTimingInfoFromGroup(group, SelectedLaps);
+                var laps = group.RaceLaps > 0 ? group.RaceLaps : 1;
+                var timingInfo = CreateTimingInfoFromGroup(group, laps);
 
                 // 加载参赛者
                 await LoadParticipantsForGroupAsync(timingInfo);
@@ -718,6 +807,7 @@ namespace Timer.ViewModels
         {
             if (!_disposed)
             {
+                WeakReferenceMessenger.Default.UnregisterAll(this);
                 foreach (var group in RaceGroups)
                 {
                     group.Dispose();

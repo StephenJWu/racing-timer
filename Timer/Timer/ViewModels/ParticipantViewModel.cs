@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Win32;
 using Timer.Data;
+using Timer.Messages;
 using Timer.Models;
 using Timer.Services;
 
@@ -16,7 +19,7 @@ namespace Timer.ViewModels
     /// <summary>
     /// 参赛人员管理页面的ViewModel
     /// </summary>
-    public class ParticipantViewModel : ObservableObject, IDisposable
+    public class ParticipantViewModel : ObservableObject, IDisposable, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IParticipantRepository _repository;
         private readonly IExcelImportService _excelImportService;
@@ -73,9 +76,23 @@ namespace Timer.ViewModels
             DeleteCommand = new AsyncRelayCommand<Participant>(DeleteParticipantAsync, participant => participant != null);
             BatchDeleteCommand = new AsyncRelayCommand(BatchDeleteParticipantsAsync);
 
+            WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
+
             // 初始化时加载数据
             _ = LoadSchoolsAsync();
             _ = LoadParticipantsAsync();
+        }
+
+        public void Receive(DataReloadRequestedMessage message)
+        {
+            if (message == null) return;
+
+            // 人员数据被其它页面批量修改/分配时，刷新当前列表与筛选源
+            if (message.Value == DataDomain.Participants)
+            {
+                _ = LoadParticipantsAsync();
+                _ = RefreshFilterSourcesAsync();
+            }
         }
 
         /// <summary>
@@ -430,6 +447,10 @@ namespace Timer.ViewModels
                         await LoadParticipantsAsync();
                         // 刷新筛选项数据源（学校/年级/班级/组别）
                         await RefreshFilterSourcesAsync();
+
+                        // 通知其它页面：人员/分组统计可能变化
+                        WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                        WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     }
                     catch (Exception ex)
                     {
@@ -723,6 +744,10 @@ namespace Timer.ViewModels
                     // 刷新列表和筛选数据源
                     await LoadParticipantsAsync();
                     await RefreshFilterSourcesAsync();
+
+                    // 通知其它页面实时刷新（人员变更会影响分组人数等）
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     
                     MessageBox.Show("参赛人员信息已成功更新。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -763,6 +788,9 @@ namespace Timer.ViewModels
                 // 刷新列表与筛选源
                 await LoadParticipantsAsync();
                 await RefreshFilterSourcesAsync();
+
+                WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
 
                 MessageBox.Show("删除成功。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -805,6 +833,9 @@ namespace Timer.ViewModels
                 await LoadParticipantsAsync();
                 await RefreshFilterSourcesAsync();
 
+                WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
+
                 MessageBox.Show("批量删除成功。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -831,6 +862,7 @@ namespace Timer.ViewModels
         {
             if (!_disposed && disposing)
             {
+                WeakReferenceMessenger.Default.UnregisterAll(this);
                 _dbContext?.Dispose();
                 _disposed = true;
             }

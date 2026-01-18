@@ -305,9 +305,9 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 更新分组的芯片组
+        /// 更新分组的配置（芯片组 + 圈数）
         /// </summary>
-        public async Task<bool> UpdateChipGroupAsync(int id, int chipGroupId)
+        public async Task<bool> UpdateRaceGroupSettingsAsync(int id, int chipGroupId, int raceLaps)
         {
             if (id <= 0)
             {
@@ -319,21 +319,37 @@ namespace Timer.Services
                 throw new ArgumentException("ChipGroupId must be greater than 0", nameof(chipGroupId));
             }
 
+            if (raceLaps <= 0)
+            {
+                raceLaps = 1;
+            }
+
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
             command.CommandText = @"
                 UPDATE RaceGroups
-                SET ChipGroupId = @chipGroupId, UpdatedAt = @updatedAt
+                SET ChipGroupId = @chipGroupId, RaceLaps = @raceLaps, UpdatedAt = @updatedAt
                 WHERE Id = @id
             ";
 
             command.Parameters.Add(new SqliteParameter("@id", id));
             command.Parameters.Add(new SqliteParameter("@chipGroupId", chipGroupId));
+            command.Parameters.Add(new SqliteParameter("@raceLaps", raceLaps));
             command.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
             return rowsAffected > 0;
+        }
+
+        /// <summary>
+        /// 兼容旧接口：仅更新芯片组（圈数保持不变）
+        /// </summary>
+        public async Task<bool> UpdateChipGroupAsync(int id, int chipGroupId)
+        {
+            var existing = await GetByIdAsync(id);
+            var laps = existing?.RaceLaps ?? 1;
+            return await UpdateRaceGroupSettingsAsync(id, chipGroupId, laps);
         }
 
         /// <summary>

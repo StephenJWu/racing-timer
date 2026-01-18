@@ -5,8 +5,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Win32;
 using Timer.Data;
+using Timer.Messages;
 using Timer.Models;
 using Timer.Services;
 using Timer.Views;
@@ -16,7 +19,7 @@ namespace Timer.ViewModels
     /// <summary>
     /// 芯片设备页面的ViewModel
     /// </summary>
-    public class ChipViewModel : ObservableObject, IDisposable
+    public class ChipViewModel : ObservableObject, IDisposable, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IChipRepository _repository;
         private readonly IChipImportService _chipImportService;
@@ -53,8 +56,25 @@ namespace Timer.ViewModels
             EditChipCommand = new AsyncRelayCommand<Chip>(EditChipAsync);
             DeleteChipCommand = new AsyncRelayCommand<Chip>(DeleteChipAsync);
 
+            WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
+
             // 初始化时加载数据
             _ = LoadChipGroupsAsync();
+        }
+
+        public void Receive(DataReloadRequestedMessage message)
+        {
+            if (message == null) return;
+
+            switch (message.Value)
+            {
+                case DataDomain.ChipGroups:
+                    _ = LoadChipGroupsAsync();
+                    break;
+                case DataDomain.Chips:
+                    _ = LoadChipsAsync();
+                    break;
+            }
         }
 
         /// <summary>
@@ -247,6 +267,9 @@ namespace Timer.ViewModels
                     _loggingService?.Info($"芯片组已更新: {group.GroupName}");
                     // 刷新列表
                     await LoadChipGroupsAsync();
+                    // 通知其它页面：芯片组列表/分组列表可能需要刷新（批量/引用场景）
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.ChipGroups));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                 }
             }
             catch (Exception ex)
@@ -285,6 +308,8 @@ namespace Timer.ViewModels
                     
                     // 刷新列表
                     await LoadChipGroupsAsync();
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.ChipGroups));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     
                     MessageBox.Show($"芯片组 \"{group.GroupName}\" 已删除", "删除成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -320,6 +345,7 @@ namespace Timer.ViewModels
                     _loggingService?.Info($"芯片已更新: {chip.LabelNumber}");
                     // 刷新芯片列表
                     await LoadChipsAsync();
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Chips));
                 }
             }
             catch (Exception ex)
@@ -355,6 +381,8 @@ namespace Timer.ViewModels
                     
                     // 更新芯片组的数量
                     await LoadChipGroupsAsync();
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Chips));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.ChipGroups));
                     
                     MessageBox.Show($"芯片 \"{chip.LabelNumber}\" 已删除", "删除成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -424,6 +452,9 @@ namespace Timer.ViewModels
 
                         // 刷新列表
                         await LoadChipGroupsAsync();
+                        WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.ChipGroups));
+                        WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Chips));
+                        WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     }
                     catch (Exception ex)
                     {
@@ -460,6 +491,7 @@ namespace Timer.ViewModels
         {
             if (!_disposed && disposing)
             {
+                WeakReferenceMessenger.Default.UnregisterAll(this);
                 // 清理托管资源
                 _disposed = true;
             }

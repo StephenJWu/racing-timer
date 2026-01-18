@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Win32;
 using Timer.Data;
+using Timer.Messages;
 using Timer.Models;
 using Timer.Services;
 
@@ -16,7 +19,7 @@ namespace Timer.ViewModels
     /// <summary>
     /// 人员分组页面的ViewModel
     /// </summary>
-    public class GroupViewModel : ObservableObject, IDisposable
+    public class GroupViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IParticipantRepository _participantRepository;
         private readonly IChipRepository _chipRepository;
@@ -80,8 +83,71 @@ namespace Timer.ViewModels
             EditParticipantCommand = new AsyncRelayCommand<Participant>(EditParticipantAsync);
             DeleteParticipantCommand = new AsyncRelayCommand<Participant>(DeleteParticipantAsync);
 
+            // 注册跨页面实时刷新（显式注册，避免多 IRecipient<> 时 Register(this) 歧义）
+            WeakReferenceMessenger.Default.Register<ChipGroupUpdatedMessage>(this);
+            WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
+
             // 加载初始数据
             _ = LoadInitialDataAsync();
+        }
+
+        public void Receive(ChipGroupUpdatedMessage message)
+        {
+            if (message?.Value == null) return;
+
+            var updated = message.Value;
+
+            // 1) 更新本页 ChipGroups 集合（用于下拉框等）
+            var existingGroup = ChipGroups.FirstOrDefault(g => g.Id == updated.Id);
+            if (existingGroup != null)
+            {
+                existingGroup.GroupName = updated.GroupName;
+                existingGroup.Color = updated.Color;
+                existingGroup.UpdatedAt = updated.UpdatedAt;
+            }
+            else
+            {
+                ChipGroups.Add(updated);
+            }
+
+            // 2) 刷新当前查询结果中的 RaceGroups 显示字段（颜色/名称）
+            foreach (var rg in RaceGroups.Where(r => r.ChipGroupId == updated.Id))
+            {
+                rg.ChipGroupName = updated.GroupName;
+                rg.ChipGroupColor = updated.Color;
+            }
+
+            // 3) 如果当前选中分组也引用该芯片组，确保详情区也刷新（RaceGroup 已可通知）
+            if (SelectedRaceGroup?.ChipGroupId == updated.Id)
+            {
+                SelectedRaceGroup.ChipGroupName = updated.GroupName;
+                SelectedRaceGroup.ChipGroupColor = updated.Color;
+            }
+        }
+
+        public void Receive(DataReloadRequestedMessage message)
+        {
+            if (message == null) return;
+
+            switch (message.Value)
+            {
+                case DataDomain.ChipGroups:
+                    _ = ReloadChipGroupsAsync();
+                    break;
+                case DataDomain.RaceGroups:
+                    // 仅在已选择学校时自动重查，避免弹“请选择学校”
+                    if (!string.IsNullOrWhiteSpace(SelectedSchool) && SelectedSchool != "全部")
+                    {
+                        _ = QueryAsync();
+                    }
+                    break;
+                case DataDomain.Participants:
+                    if (SelectedRaceGroup != null)
+                    {
+                        _ = SelectRaceGroupAsync(SelectedRaceGroup);
+                    }
+                    break;
+            }
         }
 
         /// <summary>
@@ -221,6 +287,23 @@ namespace Timer.ViewModels
             {
                 _loggingService?.Error($"加载初始数据失败: {ex.Message}", ex);
                 MessageBox.Show($"加载初始数据失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task ReloadChipGroupsAsync()
+        {
+            try
+            {
+                var chipGroups = await _chipRepository.GetAllChipGroupsAsync();
+                ChipGroups.Clear();
+                foreach (var chipGroup in chipGroups)
+                {
+                    ChipGroups.Add(chipGroup);
+                }
+            }
+            catch
+            {
+                // 静默：实时刷新不应打扰用户
             }
         }
 
@@ -408,10 +491,11 @@ namespace Timer.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    // 更新数据库中的芯片组
-                    await _raceGroupRepository.UpdateChipGroupAsync(
+                    // 更新数据库中的配置（芯片组 + 圈数）
+                    await _raceGroupRepository.UpdateRaceGroupSettingsAsync(
                         raceGroup.Id,
-                        raceGroup.ChipGroupId!.Value);
+                        raceGroup.ChipGroupId!.Value,
+                        raceGroup.RaceLaps);
 
                     // 为分组内人员分配芯片
                     var assignedCount = await _raceGroupRepository.AssignChipsToParticipantsAsync(
@@ -433,6 +517,10 @@ namespace Timer.ViewModels
                     {
                         await SelectRaceGroupAsync(raceGroup);
                     }
+
+                    // 通知其它页面：分组/人员（芯片分配）已批量变更
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
 
                     MessageBox.Show($"编辑成功！已为 {assignedCount} 名参赛人员分配芯片。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -529,6 +617,10 @@ namespace Timer.ViewModels
                     // 刷新当前分组的人员列表
                     await SelectRaceGroupAsync(SelectedRaceGroup);
                     
+                    // 通知其它页面：人员与分组统计可能变化
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
+                    
                     MessageBox.Show("编辑成功！", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
@@ -561,6 +653,9 @@ namespace Timer.ViewModels
                 {
                     await _participantRepository.DeleteAsync(participant.Id);
                     Participants.Remove(participant);
+                    
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
+                    WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     
                     _loggingService?.Info($"删除参赛人员 {participant.Name}");
                     MessageBox.Show("删除成功！", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -635,6 +730,7 @@ namespace Timer.ViewModels
         {
             if (!_disposed && disposing)
             {
+                WeakReferenceMessenger.Default.UnregisterAll(this);
                 // 清理托管资源
                 _disposed = true;
             }

@@ -6,7 +6,10 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Timer.Data;
+using Timer.Messages;
 using Timer.Models;
 using Timer.Services;
 
@@ -15,7 +18,7 @@ namespace Timer.ViewModels
     /// <summary>
     /// 比赛计时页面的ViewModel
     /// </summary>
-    public partial class RaceTimerViewModel : ObservableObject, IDisposable
+    public partial class RaceTimerViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IRaceGroupRepository _raceGroupRepository;
         private readonly IParticipantRepository _participantRepository;
@@ -116,6 +119,10 @@ namespace Timer.ViewModels
             };
             _timer.Tick += Timer_Tick;
 
+            // 注册跨页面实时刷新（显式注册，避免多 IRecipient<> 时 Register(this) 歧义）
+            WeakReferenceMessenger.Default.Register<ChipGroupUpdatedMessage>(this);
+            WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
+
             // 初始化圈数选项（1-20圈）
             for (int i = 1; i <= 20; i++)
             {
@@ -134,6 +141,53 @@ namespace Timer.ViewModels
 
             // 加载数据
             _ = InitializeAsync();
+        }
+
+        public void Receive(ChipGroupUpdatedMessage message)
+        {
+            if (message?.Value == null) return;
+            var updated = message.Value;
+
+            foreach (var rg in RaceGroups.Where(r => r.ChipGroupId == updated.Id))
+            {
+                rg.ChipGroupName = updated.GroupName;
+                rg.ChipGroupColor = updated.Color;
+            }
+
+            if (SelectedRaceGroup?.ChipGroupId == updated.Id)
+            {
+                SelectedRaceGroup.ChipGroupName = updated.GroupName;
+                SelectedRaceGroup.ChipGroupColor = updated.Color;
+            }
+        }
+
+        public void Receive(DataReloadRequestedMessage message)
+        {
+            if (message == null) return;
+
+            if (message.Value == DataDomain.RaceGroups)
+            {
+                var selectedId = SelectedRaceGroup?.Id;
+                _ = ReloadRaceGroupsAndRestoreSelectionAsync(selectedId);
+            }
+            else if (message.Value == DataDomain.Participants)
+            {
+                // 当前页面选中分组时，人员数据变化会影响计时列表
+                if (SelectedRaceGroup != null)
+                {
+                    _ = OnRaceGroupSelectedAsync();
+                }
+            }
+        }
+
+        private async Task ReloadRaceGroupsAndRestoreSelectionAsync(int? selectedRaceGroupId)
+        {
+            await LoadRaceGroupsAsync();
+
+            if (selectedRaceGroupId.HasValue)
+            {
+                SelectedRaceGroup = RaceGroups.FirstOrDefault(g => g.Id == selectedRaceGroupId.Value);
+            }
         }
 
         public IAsyncRelayCommand LoadRaceGroupsCommand { get; }
@@ -547,6 +601,7 @@ namespace Timer.ViewModels
         {
             if (!_disposed && disposing)
             {
+                WeakReferenceMessenger.Default.UnregisterAll(this);
                 _timer?.Stop();
                 _disposed = true;
             }

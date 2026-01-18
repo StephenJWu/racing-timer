@@ -55,7 +55,16 @@ namespace Timer.Services
             string groupName);
 
         /// <summary>
-        /// 更新分组的芯片组
+        /// 更新分组的配置（芯片组 + 圈数）
+        /// </summary>
+        /// <param name="id">分组ID</param>
+        /// <param name="chipGroupId">芯片组ID</param>
+        /// <param name="raceLaps">圈数</param>
+        /// <returns>是否更新成功</returns>
+        Task<bool> UpdateRaceGroupSettingsAsync(int id, int chipGroupId, int raceLaps);
+
+        /// <summary>
+        /// 兼容旧接口：仅更新芯片组（圈数保持不变）
         /// </summary>
         /// <param name="id">分组ID</param>
         /// <param name="chipGroupId">芯片组ID</param>

@@ -72,6 +72,8 @@ namespace Timer.ViewModels
             // 更新参赛人员的芯片信息
             _participant.ChipNumber = ChipLabelNumber;
             _participant.ChipInternalNumber = ChipInternalNumber;
+            // 业务约定：号码布 = 芯片标签号码（与自动分配芯片逻辑保持一致）
+            _participant.BibNumber = ChipLabelNumber;
 
             DialogResult = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
