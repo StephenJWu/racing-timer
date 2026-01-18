@@ -41,7 +41,13 @@ namespace Timer.ViewModels
         private RaceStatus _currentStatus = RaceStatus.Stopped;
 
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanEditSettings))]
         private bool _isRaceActive;
+
+        /// <summary>
+        /// 是否可以编辑设置（比赛未开始时）
+        /// </summary>
+        public bool CanEditSettings => !IsRaceActive;
 
         [ObservableProperty]
         private bool _canStart;
@@ -62,13 +68,33 @@ namespace Timer.ViewModels
         private string _statusColor = "#94a3b8";
 
         [ObservableProperty]
-        private int _totalLaps;
+        private int _totalLaps = 1;
+
+        [ObservableProperty]
+        private ObservableCollection<int> _lapOptions = new();
 
         [ObservableProperty]
         private int _participantCount;
 
         [ObservableProperty]
         private bool _isLoading;
+
+        private string _quickLapInput = string.Empty;
+        
+        /// <summary>
+        /// 快速记圈输入（号码布或芯片号）
+        /// </summary>
+        public string QuickLapInput
+        {
+            get => _quickLapInput;
+            set
+            {
+                if (SetProperty(ref _quickLapInput, value))
+                {
+                    QuickRecordLapCommand?.NotifyCanExecuteChanged();
+                }
+            }
+        }
 
         public string Title => "比赛计时";
 
@@ -90,6 +116,12 @@ namespace Timer.ViewModels
             };
             _timer.Tick += Timer_Tick;
 
+            // 初始化圈数选项（1-20圈）
+            for (int i = 1; i <= 20; i++)
+            {
+                LapOptions.Add(i);
+            }
+
             // 初始化命令
             LoadRaceGroupsCommand = new AsyncRelayCommand(LoadRaceGroupsAsync);
             SelectRaceGroupCommand = new AsyncRelayCommand(OnRaceGroupSelectedAsync);
@@ -98,6 +130,7 @@ namespace Timer.ViewModels
             ResumeRaceCommand = new AsyncRelayCommand(ResumeRaceAsync, () => CanResume);
             StopRaceCommand = new AsyncRelayCommand(StopRaceAsync, () => CanStop);
             RecordLapCommand = new AsyncRelayCommand<ParticipantTimingInfo>(RecordLapAsync, p => p != null && IsRaceActive);
+            QuickRecordLapCommand = new AsyncRelayCommand(QuickRecordLapAsync, () => IsRaceActive && !string.IsNullOrWhiteSpace(QuickLapInput));
 
             // 加载数据
             _ = InitializeAsync();
@@ -110,6 +143,7 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand ResumeRaceCommand { get; }
         public IAsyncRelayCommand StopRaceCommand { get; }
         public IAsyncRelayCommand<ParticipantTimingInfo> RecordLapCommand { get; }
+        public IAsyncRelayCommand QuickRecordLapCommand { get; }
 
         private async Task InitializeAsync()
         {
@@ -125,6 +159,17 @@ namespace Timer.ViewModels
             else
             {
                 UpdateButtonStates();
+            }
+        }
+
+        /// <summary>
+        /// 公开的刷新方法，供页面加载时调用
+        /// </summary>
+        public async Task RefreshAsync()
+        {
+            if (!IsRaceActive)
+            {
+                await LoadRaceGroupsAsync();
             }
         }
 
@@ -192,7 +237,11 @@ namespace Timer.ViewModels
                     });
                 }
 
-                TotalLaps = SelectedRaceGroup.RaceLaps;
+                // 默认圈数设为1，用户可以手动选择
+                if (TotalLaps == 0)
+                {
+                    TotalLaps = 1;
+                }
                 ParticipantCount = ParticipantTimings.Count;
                 UpdateButtonStates();
             }
@@ -321,11 +370,20 @@ namespace Timer.ViewModels
                 participant.TotalTime = TimeSpan.FromMilliseconds(lapRecord.TotalTime);
                 participant.LastLapTime = TimeSpan.FromMilliseconds(lapRecord.LapTime);
                 participant.Rank = lapRecord.Rank ?? 0;
+                
+                // 添加本圈用时到列表
+                participant.LapTimes.Add(TimeSpan.FromMilliseconds(lapRecord.LapTime));
+                participant.NotifyAllLapsChanged();
 
-                // 检查是否完成比赛
+                // 更新状态
                 if (participant.CurrentLap >= TotalLaps)
                 {
                     participant.IsCompleted = true;
+                    participant.Status = "已完成";
+                }
+                else
+                {
+                    participant.Status = "进行中";
                 }
 
                 // 更新所有参赛者的排名
@@ -340,6 +398,38 @@ namespace Timer.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"记录圈次失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task QuickRecordLapAsync()
+        {
+            if (string.IsNullOrWhiteSpace(QuickLapInput))
+                return;
+
+            try
+            {
+                var input = QuickLapInput.Trim();
+                
+                // 根据号码布（芯片标签号码）查找参赛者
+                var participant = ParticipantTimings.FirstOrDefault(p => 
+                    p.BibNumber == input || 
+                    p.ChipNumber == input);
+
+                if (participant == null)
+                {
+                    MessageBox.Show($"未找到号码布为 '{input}' 的参赛者", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 调用记圈方法
+                await RecordLapAsync(participant);
+                
+                // 清空输入框以便下次输入
+                QuickLapInput = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"快速记圈失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -434,6 +524,8 @@ namespace Timer.ViewModels
             PauseRaceCommand.NotifyCanExecuteChanged();
             ResumeRaceCommand.NotifyCanExecuteChanged();
             StopRaceCommand.NotifyCanExecuteChanged();
+            RecordLapCommand.NotifyCanExecuteChanged();
+            QuickRecordLapCommand.NotifyCanExecuteChanged();
         }
 
         private void UpdateStatusDisplay()

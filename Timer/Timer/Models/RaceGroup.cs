@@ -68,9 +68,9 @@ namespace Timer.Models
         public int ParticipantCount { get; set; }
 
         /// <summary>
-        /// 显示名称：年级-班级-组名（用于UI显示）
+        /// 显示名称：学校-年级-班级-组名（用于UI显示）
         /// </summary>
-        public string DisplayName => $"{Grade}-{Class}-{GroupName}";
+        public string DisplayName => $"{School}-{Grade}-{Class}-{GroupName}";
     }
 }
 

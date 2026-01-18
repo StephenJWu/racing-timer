@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Timer.ViewModels
@@ -34,6 +36,11 @@ namespace Timer.ViewModels
         [NotifyPropertyChangedFor(nameof(LastLapTimeFormatted))]
         private TimeSpan? _lastLapTime;
 
+        /// <summary>
+        /// 所有圈次的用时列表（索引0表示第1圈）
+        /// </summary>
+        public List<TimeSpan> LapTimes { get; } = new();
+
         [ObservableProperty]
         private string _status = "未开始";
 
@@ -52,6 +59,21 @@ namespace Timer.ViewModels
         /// 格式化显示的最后一圈用时
         /// </summary>
         public string LastLapTimeFormatted => _lastLapTime.HasValue ? FormatTimeSpan(_lastLapTime.Value) : "-";
+
+        /// <summary>
+        /// 所有圈次成绩的格式化显示（用于工具提示或详细视图）
+        /// </summary>
+        public string AllLapsFormatted
+        {
+            get
+            {
+                if (LapTimes.Count == 0)
+                    return "未开始";
+
+                return string.Join(" | ", LapTimes.Select((time, index) => 
+                    $"第{index + 1}圈: {FormatTimeSpan(time)}"));
+            }
+        }
 
         /// <summary>
         /// 格式化时间显示（HH:MM:SS.fff）
@@ -85,6 +107,14 @@ namespace Timer.ViewModels
             {
                 Status = "未开始";
             }
+        }
+
+        /// <summary>
+        /// 通知全部圈次显示已更新
+        /// </summary>
+        public void NotifyAllLapsChanged()
+        {
+            OnPropertyChanged(nameof(AllLapsFormatted));
         }
     }
 }

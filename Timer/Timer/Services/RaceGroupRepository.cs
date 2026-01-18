@@ -382,18 +382,20 @@ namespace Timer.Services
                     $"芯片数量不足：需要 {participants.Count} 个芯片，但芯片组中只有 {chips.Count} 个芯片");
             }
 
-            // 为每个参赛人员分配芯片
+            // 为每个参赛人员分配芯片（号码布 = 芯片标签号码）
             var updateCommand = connection.CreateCommand();
             updateCommand.CommandText = @"
                 UPDATE Participants
-                SET ChipNumber = @chipNumber, UpdatedAt = @updatedAt
+                SET BibNumber = @bibNumber, ChipNumber = @chipNumber, UpdatedAt = @updatedAt
                 WHERE Id = @id
             ";
 
+            var bibNumberParam = new SqliteParameter("@bibNumber", "");
             var chipNumberParam = new SqliteParameter("@chipNumber", "");
             var updatedAtParam = new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             var idParam = new SqliteParameter("@id", 0);
 
+            updateCommand.Parameters.Add(bibNumberParam);
             updateCommand.Parameters.Add(chipNumberParam);
             updateCommand.Parameters.Add(updatedAtParam);
             updateCommand.Parameters.Add(idParam);
@@ -401,7 +403,9 @@ namespace Timer.Services
             int assignedCount = 0;
             for (int i = 0; i < participants.Count; i++)
             {
-                chipNumberParam.Value = chips[i];
+                var chipLabelNumber = chips[i];
+                bibNumberParam.Value = chipLabelNumber;  // 号码布 = 芯片标签号码
+                chipNumberParam.Value = chipLabelNumber;
                 idParam.Value = participants[i].Id;
 
                 await updateCommand.ExecuteNonQueryAsync();
