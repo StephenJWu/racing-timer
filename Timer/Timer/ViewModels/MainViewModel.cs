@@ -55,13 +55,13 @@ namespace Timer.ViewModels
 
         private void InitializeMenuItems()
         {
-            // 比赛计时
+            // 比赛计时（使用新的多组并行模式）
             var raceTimerItem = new NavigationItem
             {
                 Title = "比赛计时",
                 Icon = "⏱️",
                 IconColor = "#f97316",  // 橙色
-                ViewModel = CreateRaceTimerViewModel()
+                ViewModel = CreateMultiRaceTimerViewModel()
             };
             raceTimerItem.Command = NavigateCommand;
 
@@ -240,7 +240,7 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 创建RaceTimerViewModel实例（带依赖注入）
+        /// 创建RaceTimerViewModel实例（带依赖注入）- 旧版单组模式
         /// </summary>
         private RaceTimerViewModel CreateRaceTimerViewModel()
         {
@@ -250,6 +250,19 @@ namespace Timer.ViewModels
             var lapRecordRepo = new LapRecordRepository(_dbContext);
             var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
             return new RaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _dbContext);
+        }
+
+        /// <summary>
+        /// 创建MultiRaceTimerViewModel实例（带依赖注入）- 新版多组并行模式
+        /// </summary>
+        private MultiRaceTimerViewModel CreateMultiRaceTimerViewModel()
+        {
+            var raceGroupRepo = new RaceGroupRepository(_dbContext);
+            var participantRepo = new ParticipantRepository(_dbContext);
+            var raceRecordRepo = new RaceRecordRepository(_dbContext);
+            var lapRecordRepo = new LapRecordRepository(_dbContext);
+            var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
+            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, timerService);
         }
 
         /// <summary>

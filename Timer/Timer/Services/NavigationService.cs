@@ -28,6 +28,7 @@ namespace Timer.Services
         private void RegisterViewModels()
         {
             Register<RaceTimerViewModel, RaceTimerView>();
+            Register<MultiRaceTimerViewModel, RaceTimerView>();  // 新的多组并行计时
             Register<ScoreViewModel, ScoreView>();
             Register<ParticipantViewModel, ParticipantView>();
             Register<GroupViewModel, GroupView>();

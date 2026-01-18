@@ -30,6 +30,11 @@ namespace Timer.Services
         Task<RaceRecord?> GetActiveRaceAsync();
 
         /// <summary>
+        /// 获取所有正在进行的比赛记录（状态为Running或Paused）
+        /// </summary>
+        Task<List<RaceRecord>> GetActiveRacesAsync();
+
+        /// <summary>
         /// 创建比赛记录
         /// </summary>
         Task<int> CreateAsync(RaceRecord raceRecord);

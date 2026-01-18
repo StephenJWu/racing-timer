@@ -102,6 +102,27 @@ namespace Timer.Services
             return null;
         }
 
+        public async Task<List<RaceRecord>> GetActiveRacesAsync()
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT Id, RaceGroupId, StartTime, EndTime, Status, TotalLaps, CreatedAt
+                FROM RaceRecords
+                WHERE Status IN ('Running', 'Paused')
+                ORDER BY StartTime DESC
+            ";
+
+            var records = new List<RaceRecord>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                records.Add(MapRaceRecord(reader));
+            }
+
+            return records;
+        }
+
         public async Task<int> CreateAsync(RaceRecord raceRecord)
         {
             var connection = await _dbContext.GetConnectionAsync();
