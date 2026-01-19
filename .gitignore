@@ -2,6 +2,7 @@
 bin/
 obj/
 publish/
+installer/
 
 # Visual Studio / Rider
 .vs/
