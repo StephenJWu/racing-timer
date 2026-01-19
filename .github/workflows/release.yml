@@ -1,0 +1,61 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    name: 创建发布版本
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        
+    - name: 还原依赖
+      run: dotnet restore Timer/Timer/Timer.csproj
+      
+    - name: 发布 (x64)
+      run: dotnet publish Timer/Timer/Timer.csproj -c Release -r win-x64 --self-contained false -o publish/x64
+      
+    - name: 压缩发布文件
+      run: Compress-Archive -Path publish/x64/* -DestinationPath Timer-x64-Release.zip
+      
+    - name: 获取版本号
+      id: get_version
+      run: |
+        if ("${{ github.ref }}" -like "refs/tags/*") {
+          $version = "${{ github.ref }}" -replace "refs/tags/", ""
+        } else {
+          $version = "dev-${{ github.sha }}".Substring(0, 15)
+        }
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+      
+    - name: 创建 GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          Timer-x64-Release.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: Timer-Release-${{ steps.get_version.outputs.version }}
+        path: publish/x64/
+        retention-days: 30
+
