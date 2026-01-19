@@ -141,6 +141,9 @@ namespace Timer.ViewModels
             MenuItems.Add(scoreItem);
             MenuItems.Add(participantManagementItem);
             MenuItems.Add(deviceManagementItem);
+
+            // 应用启动默认选中“比赛计时”
+            NavigateTo(raceTimerItem);
         }
 
         /// <summary>
