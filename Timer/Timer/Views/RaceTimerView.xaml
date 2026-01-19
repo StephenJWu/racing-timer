@@ -86,7 +86,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -165,64 +164,39 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 刷新按钮 -->
-                <Button Grid.Column="2"
-                        Content="🔄 刷新分组"
-                        Command="{Binding LoadAvailableGroupsCommand}"
-                        Style="{StaticResource SmallActionButton}"
-                        Background="#f1f5f9"
-                        Foreground="#475569"
-                        Padding="16,8"/>
-            </Grid>
-        </Border>
+                <!-- 标题栏右侧：添加比赛组 -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="➕ 添加比赛组:" 
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
 
-        <!-- 添加分组区域 -->
-        <Border Grid.Row="1" 
-                Background="#f0fdf4"
-                BorderBrush="#bbf7d0"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="20"
-                Margin="0,0,0,16">
-            <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+                    <!-- 分组选择下拉框 -->
+                    <ComboBox ItemsSource="{Binding AvailableRaceGroups}"
+                              SelectedItem="{Binding SelectedAvailableGroup}"
+                              DisplayMemberPath="DisplayName"
+                              Height="32"
+                              MinWidth="260"
+                              Margin="0,0,10,0"/>
 
-                <TextBlock Grid.Column="0" 
-                           Text="➕ 添加比赛组:" 
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Foreground="#166534"
-                           VerticalAlignment="Center"
-                           Margin="0,0,16,0"/>
-
-                <!-- 分组选择下拉框 -->
-                <ComboBox Grid.Column="1"
-                          ItemsSource="{Binding AvailableRaceGroups}"
-                          SelectedItem="{Binding SelectedAvailableGroup}"
-                          DisplayMemberPath="DisplayName"
-                          Height="36"
-                          MinWidth="300"
-                          Margin="0,0,16,0"/>
-
-                <!-- 添加按钮 -->
-                <Button Grid.Column="2"
-                        Content="添加到比赛"
-                        Command="{Binding AddGroupToRaceCommand}"
-                        Background="#22c55e"
-                        Foreground="White"
-                        Height="36"
-                        Padding="20,0"
-                        Style="{StaticResource SmallActionButton}"/>
+                    <!-- 添加按钮 -->
+                    <Button Content="添加到比赛"
+                            Command="{Binding AddGroupToRaceCommand}"
+                            Background="#22c55e"
+                            Foreground="White"
+                            Height="32"
+                            Padding="16,0"
+                            Style="{StaticResource SmallActionButton}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- 批量操作条（仅当有比赛组时显示） -->
-        <Border Grid.Row="2" 
+        <Border Grid.Row="1" 
                 Background="#f8fafc"
                 BorderBrush="#e2e8f0"
                 BorderThickness="1"
@@ -279,7 +253,7 @@
         </Border>
 
         <!-- 加载指示器 -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="2"
                 Background="#fffbeb"
                 BorderBrush="#fde68a"
                 BorderThickness="1"
@@ -297,7 +271,7 @@
         </Border>
 
         <!-- 空状态提示 -->
-        <Border Grid.Row="3"
+        <Border Grid.Row="2"
                 Visibility="{Binding HasRaceGroups, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
@@ -317,7 +291,7 @@
         </Border>
 
         <!-- 比赛分组列表 -->
-        <ScrollViewer Grid.Row="3"
+        <ScrollViewer Grid.Row="2"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Visibility="{Binding HasRaceGroups, Converter={StaticResource BoolToVisibilityConverter}}">
