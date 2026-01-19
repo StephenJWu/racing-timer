@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master, develop ]
 
+# 添加必要的权限配置
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     name: 构建和测试

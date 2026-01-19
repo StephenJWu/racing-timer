@@ -6,6 +6,11 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+# 添加必要的权限配置
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   create-release:
     name: 创建发布版本
