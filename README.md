@@ -1,208 +1,212 @@
-# 比赛计时系统 (Race Timer Pro)
+# Timer - 赛事计时系统
 
-<div align="center">
+[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
+[![Release Build](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/Release%20Build/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-⚡ **专业的比赛计时与人员管理解决方案**
+基于 WPF 和 .NET 10.0 的专业赛事计时管理系统，支持多组并行计时、芯片管理、人员分组等功能。
 
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
-![WPF](https://img.shields.io/badge/WPF-Windows-0078D6?logo=windows)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
-![License](https://img.shields.io/badge/License-MIT-green)
+## ✨ 主要功能
 
-</div>
-
----
-
-## 📖 项目简介
-
-**比赛计时系统**是一款基于 WPF 开发的专业比赛计时与人员管理软件，适用于学校运动会、体育赛事等场景。系统支持参赛人员管理、芯片分配、分组比赛、成绩记录与导出等完整功能。
-
-## ✨ 功能特性
+### 🏃 比赛计时
+- **多组并行计时**：同时管理多个比赛组，独立计时互不干扰
+- **实时记录**：支持扫码/手动录入，实时记录每圈成绩
+- **圈数配置**：在人员分组中统一配置圈数，计时页面自动应用
+- **比赛状态管理**：开始、暂停、继续、停止，支持中断恢复
 
 ### 👥 人员管理
-- 支持 Excel 批量导入参赛人员
-- 管理参赛者信息（学校、年级、班级、姓名、性别、准考证号）
-- 高级搜索与筛选功能
-- 批量编辑与删除
+- **参赛人员管理**：导入/导出 Excel，批量管理参赛者信息
+- **人员分组**：按学校、年级、班级、组别灵活分组
+- **芯片分配**：为分组批量分配芯片，自动同步号码布
 
-### 🏷️ 芯片管理
-- 芯片组管理（支持颜色标识）
-- 芯片标签号码与内部编号映射
-- Excel 批量导入芯片数据
-- 芯片分配与回收
-
-### 🏃 比赛分组
-- 按学校/年级/班级/组别灵活分组
-- 支持设置比赛圈数（1-20 圈）
-- 芯片组与比赛组关联
-- 参赛人员芯片自动分配
-
-### ⏱️ 比赛计时
-- 实时计时功能
-- 多圈次成绩记录
-- 芯片感应计时支持
+### 💳 芯片设备管理
+- **芯片组管理**：创建芯片组，设置颜色标识
+- **芯片导入**：支持 Excel 批量导入芯片信息
+- **实时同步**：芯片组颜色修改后，全局实时更新
 
 ### 📊 成绩管理
-- 成绩查询与统计
-- Excel 成绩导出
-- 分组成绩排名
+- **成绩查询**：多维度筛选查看成绩
+- **数据导出**：导出 Excel 报表
 
-### 🔧 设备管理
-- 计时设备配置
-- 设备状态监控
+## 🛠️ 技术栈
 
-## 🛠️ 技术架构
+- **框架**: .NET 10.0 + WPF
+- **架构**: MVVM (使用 CommunityToolkit.Mvvm)
+- **数据库**: SQLite (Microsoft.Data.Sqlite)
+- **Excel 处理**: ClosedXML
+- **消息通信**: WeakReferenceMessenger (实时数据同步)
 
-| 技术 | 说明 |
-|------|------|
-| **.NET 10** | 运行时框架 |
-| **WPF** | Windows 桌面 UI 框架 |
-| **MVVM** | 使用 CommunityToolkit.Mvvm 实现 |
-| **SQLite** | 本地数据库存储 |
-| **ClosedXML** | Excel 文件读写 |
+## 📦 快速开始
+
+### 环境要求
+
+- Windows 10/11
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Visual Studio 2022 或 JetBrains Rider (可选)
+
+### 克隆仓库
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
+cd YOUR_REPO
+```
+
+### 构建项目
+
+#### 使用命令行
+
+```bash
+# 还原依赖
+dotnet restore Timer/Timer/Timer.csproj
+
+# Debug 构建
+dotnet build Timer/Timer/Timer.csproj -c Debug
+
+# Release 构建
+dotnet build Timer/Timer/Timer.csproj -c Release
+
+# 发布 (x64)
+dotnet publish Timer/Timer/Timer.csproj -c Release -r win-x64 --self-contained false
+```
+
+#### 使用构建脚本
+
+```bash
+# Windows
+build.bat
+```
+
+### 运行应用
+
+```bash
+# 方式 1: 直接运行
+dotnet run --project Timer/Timer/Timer.csproj
+
+# 方式 2: 运行构建产物
+Timer\Timer\bin\Debug\net10.0-windows\Timer.exe
+```
+
+## 🚀 GitHub Actions CI/CD
+
+本项目已配置自动化工作流：
+
+### CI 流程 (`.github/workflows/ci.yml`)
+- **触发条件**: Push 到 main/master/develop 分支，或创建 PR
+- **执行任务**:
+  - ✅ 代码检出
+  - ✅ 还原 NuGet 依赖
+  - ✅ Debug/Release 双模式编译
+  - ✅ 上传构建产物（保留 7 天）
+  - ✅ 代码格式检查
+
+### Release 流程 (`.github/workflows/release.yml`)
+- **触发条件**: 推送 `v*.*.*` 标签（如 `v1.0.3`）
+- **执行任务**:
+  - ✅ 发布 x64 版本
+  - ✅ 压缩发布文件
+  - ✅ 自动创建 GitHub Release
+  - ✅ 上传构建产物（保留 30 天）
+
+### PR 检查 (`.github/workflows/pr-checks.yml`)
+- **触发条件**: 创建或更新 Pull Request
+- **执行任务**:
+  - ✅ 编译验证
+  - ✅ XAML 语法检查
+  - ✅ PR 大小检查
+  - ✅ 自动添加检查结果评论
+
+### 发布新版本
+
+```bash
+# 创建并推送标签
+git tag v1.0.3
+git push origin v1.0.3
+
+# GitHub Actions 会自动:
+# 1. 构建 Release 版本
+# 2. 创建 GitHub Release
+# 3. 上传构建产物
+```
 
 ## 📁 项目结构
 
 ```
 Timer/
 ├── Timer/
+│   ├── ViewModels/          # MVVM 视图模型
+│   ├── Views/               # XAML 视图
 │   ├── Models/              # 数据模型
-│   │   ├── Participant.cs   # 参赛人员
-│   │   ├── Chip.cs          # 芯片
-│   │   ├── ChipGroup.cs     # 芯片组
-│   │   └── RaceGroup.cs     # 比赛分组
-│   ├── ViewModels/          # 视图模型
-│   ├── Views/               # 视图界面
-│   ├── Services/            # 业务服务
-│   │   ├── ParticipantRepository.cs
-│   │   ├── ChipRepository.cs
-│   │   ├── RaceGroupRepository.cs
-│   │   └── ExcelImportService.cs
+│   ├── Services/            # 业务逻辑服务
+│   ├── Messages/            # 跨 VM 消息
 │   ├── Converters/          # 值转换器
-│   ├── Data/                # 数据库上下文
-│   └── Resources/           # 样式资源
-├── data/
-│   └── timer.db             # SQLite 数据库
-└── Timer.slnx               # 解决方案文件
+│   ├── Resources/           # 样式资源
+│   └── Data/                # 数据库上下文
+├── .github/
+│   ├── workflows/           # GitHub Actions 工作流
+│   ├── ISSUE_TEMPLATE/      # Issue 模板
+│   └── dependabot.yml       # 依赖自动更新
+├── build.bat                # Windows 构建脚本
+├── setup.iss                # Inno Setup 安装脚本
+└── README.md
 ```
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Windows 10/11
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- Visual Studio 2022 或 VS Code
-
-### 开发运行
-
-```bash
-# 克隆项目
-git clone <repository-url>
-cd tt
-
-# 进入项目目录
-cd Timer/Timer
-
-# 还原依赖
-dotnet restore
-
-# 运行项目
-dotnet run
-```
-
-### 发布构建
-
-```bash
-# 发布自包含的 x64 版本
-dotnet publish -c Release -r win-x64 --self-contained true -o publish
-```
-
-## 📦 打包安装程序
-
-项目使用 [Inno Setup](https://jrsoftware.org/isinfo.php) 创建安装程序。
-
-### 一键打包
-
-运行根目录下的 `build.bat` 脚本：
-
-```batch
-build.bat
-```
-
-该脚本会自动完成：
-1. 关闭运行中的应用
-2. 发布最新代码
-3. 生成安装包到 `installer/` 目录
-
-### 手动打包
-
-1. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)
-2. 先发布项目到 `publish` 目录
-3. 运行 `setup.iss` 生成安装程序
-
-## 📋 数据导入模板
-
-项目提供以下 Excel 模板文件：
-
-| 文件 | 说明 |
-|------|------|
-| `人员导入模板.xls` | 参赛人员批量导入模板 |
-| `芯片测试数据.xlsx` | 芯片数据导入示例 |
-| `测试数据.xlsx` | 综合测试数据 |
-
-### 人员导入字段
-
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| 序号 | ✅ | 从 1 开始的连续编号 |
-| 日期 | ✅ | 比赛日期 |
-| 学校 | ❌ | 学校名称 |
-| 年级 | ❌ | 年级 |
-| 班级 | ❌ | 班级 |
-| 姓名 | ✅ | 参赛者姓名 |
-| 性别 | ✅ | 男/女 |
-| 准考证号 | ❌ | 唯一标识 |
-| 组别 | ❌ | 组别名称 |
-
-## 📸 界面预览
-
-系统采用现代化深色主题设计，界面美观、操作简便：
-
-- 左侧导航菜单，层级清晰
-- 右侧内容区域，功能丰富
-- 支持响应式布局
 
 ## 🔧 配置说明
 
 ### 数据库位置
+- **开发环境**: `Timer/Timer/bin/Debug/net10.0-windows/data/timer.db`
+- **发布版本**: 与可执行文件同级的 `data/timer.db`
 
-数据库文件默认存储在 `data/timer.db`，安装后用户有修改权限。
-
-### 日志与调试
-
-调试模式下可查看详细日志输出。
-
-## 📄 许可证
-
-本项目采用 MIT 许可证。
+### Excel 模板
+- **人员导入模板**: `人员导入模板.xls`
+- **芯片导入**: 支持包含"标签号"和"内部号"列的 Excel 文件
 
 ## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
 
-1. Fork 本项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add AmazingFeature'`)
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+5. 创建 Pull Request
+
+### 代码规范
+- 遵循 C# 编码规范
+- 使用 MVVM 模式
+- 添加必要的注释和文档
+- 确保代码通过 CI 检查
+
+## 📝 更新日志
+
+### v1.0.2 (Latest)
+- ✨ 将圈数配置移至人员分组，简化计时流程
+- 🐛 修复芯片组颜色不同步问题
+- 🔄 实现全局数据实时刷新
+- 🎨 优化 DataGrid 对齐和样式
+
+### v1.0.1
+- 🐛 修复 XamlParseException
+- 🔧 完善资源字典配置
+
+### v1.0.0
+- 🎉 首次发布
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+## 🙏 致谢
+
+- [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) - MVVM 框架
+- [ClosedXML](https://github.com/ClosedXML/ClosedXML) - Excel 处理
+- [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore) - SQLite 支持
+
+## 📧 联系方式
+
+如有问题或建议，请：
+- 提交 [Issue](https://github.com/YOUR_USERNAME/YOUR_REPO/issues)
+- 发送邮件至: your-email@example.com
 
 ---
 
-<div align="center">
-
-**比赛计时系统** © 2026 Race Timer Pro
-
-</div>
-
-
+⭐ 如果这个项目对你有帮助，请给个 Star！
