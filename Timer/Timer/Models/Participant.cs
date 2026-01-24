@@ -13,6 +13,11 @@ namespace Timer.Models
         public int Id { get; set; }
 
         /// <summary>
+        /// 关联的项目ID
+        /// </summary>
+        public int? ProjectId { get; set; }
+
+        /// <summary>
         /// 序号，必须从1开始连续
         /// </summary>
         public int SequenceNumber { get; set; }

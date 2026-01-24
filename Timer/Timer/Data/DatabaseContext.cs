@@ -55,6 +55,7 @@ namespace Timer.Data
             command.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Participants (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ProjectId INTEGER,
                     SequenceNumber INTEGER NOT NULL UNIQUE,
                     Date TEXT NOT NULL,
                     School TEXT,
@@ -67,13 +68,15 @@ namespace Timer.Data
                     BibNumber TEXT,
                     ChipNumber TEXT,
                     CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(ProjectId) REFERENCES Projects(Id)
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_participants_name ON Participants(Name);
                 CREATE INDEX IF NOT EXISTS idx_participants_exam_number ON Participants(ExamNumber);
                 CREATE INDEX IF NOT EXISTS idx_participants_group_name ON Participants(GroupName);
                 CREATE INDEX IF NOT EXISTS idx_participants_school ON Participants(School);
+                CREATE INDEX IF NOT EXISTS idx_participants_project_id ON Participants(ProjectId);
 
                 CREATE TABLE IF NOT EXISTS ChipGroups (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,9 +148,68 @@ namespace Timer.Data
                 CREATE INDEX IF NOT EXISTS idx_laprecords_racerecordid ON LapRecords(RaceRecordId);
                 CREATE INDEX IF NOT EXISTS idx_laprecords_participantid ON LapRecords(ParticipantId);
                 CREATE INDEX IF NOT EXISTS idx_laprecords_chipnumber ON LapRecords(ChipNumber);
+
+                CREATE TABLE IF NOT EXISTS Projects (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ProjectDate TEXT NOT NULL,
+                    Name TEXT NOT NULL,
+                    Status TEXT NOT NULL DEFAULT 'Normal',
+                    CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_projects_date ON Projects(ProjectDate);
+                CREATE INDEX IF NOT EXISTS idx_projects_name ON Projects(Name);
+                CREATE INDEX IF NOT EXISTS idx_projects_status ON Projects(Status);
             ";
 
             await command.ExecuteNonQueryAsync();
+
+            // 升级现有表结构：为 Projects 表添加 Status 列（如果不存在）
+            // 注意：ALTER TABLE ADD COLUMN 不支持 NOT NULL（除非有默认值），这里使用 TEXT DEFAULT 'Normal'
+            await AddColumnIfNotExistsAsync(connection, "Projects", "Status", "TEXT DEFAULT 'Normal'");
+
+            // 升级现有表结构：为 Participants 表添加 ProjectId 列（如果不存在）
+            await AddColumnIfNotExistsAsync(connection, "Participants", "ProjectId", "INTEGER");
+        }
+
+        /// <summary>
+        /// 如果列不存在则添加列
+        /// </summary>
+        private async Task AddColumnIfNotExistsAsync(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
+        {
+            try
+            {
+                // 检查列是否存在
+                using var pragmaCommand = connection.CreateCommand();
+                pragmaCommand.CommandText = $"PRAGMA table_info({tableName})";
+                
+                bool columnExists = false;
+                using (var reader = await pragmaCommand.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var name = reader.GetString(1); // 列名在第二个位置
+                        if (name.Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            columnExists = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 如果列不存在，添加列
+                if (!columnExists)
+                {
+                    using var alterCommand = connection.CreateCommand();
+                    alterCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition}";
+                    await alterCommand.ExecuteNonQueryAsync();
+                }
+            }
+            catch
+            {
+                // 忽略错误（列可能已存在或其他问题）
+            }
         }
 
         /// <summary>

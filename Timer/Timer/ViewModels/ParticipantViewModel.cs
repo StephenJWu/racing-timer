@@ -21,8 +21,11 @@ namespace Timer.ViewModels
     /// </summary>
     public class ParticipantViewModel : ObservableObject, IDisposable, IRecipient<DataReloadRequestedMessage>
     {
+        private const string AllOption = "全部";
+        
         private readonly IParticipantRepository _repository;
         private readonly IExcelImportService _excelImportService;
+        private readonly IProjectRepository _projectRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
         private bool _disposed;
@@ -53,11 +56,13 @@ namespace Timer.ViewModels
         public ParticipantViewModel(
             IParticipantRepository repository,
             IExcelImportService excelImportService,
+            IProjectRepository projectRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _excelImportService = excelImportService ?? throw new ArgumentNullException(nameof(excelImportService));
+            _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
 
@@ -315,12 +320,13 @@ namespace Timer.ViewModels
         /// </summary>
         public string? SelectedSchool
         {
-            get => SearchFilter.School;
+            get => SearchFilter.School == null ? AllOption : SearchFilter.School;
             set
             {
-                if (SearchFilter.School != value)
+                var actualValue = value == AllOption ? null : value;
+                if (SearchFilter.School != actualValue)
                 {
-                    _ = OnSchoolChangedAsync(value);
+                    _ = OnSchoolChangedAsync(actualValue);
                 }
             }
         }
@@ -330,12 +336,13 @@ namespace Timer.ViewModels
         /// </summary>
         public string? SelectedGrade
         {
-            get => SearchFilter.Grade;
+            get => SearchFilter.Grade == null ? AllOption : SearchFilter.Grade;
             set
             {
-                if (SearchFilter.Grade != value)
+                var actualValue = value == AllOption ? null : value;
+                if (SearchFilter.Grade != actualValue)
                 {
-                    _ = OnGradeChangedAsync(value);
+                    _ = OnGradeChangedAsync(actualValue);
                 }
             }
         }
@@ -345,12 +352,13 @@ namespace Timer.ViewModels
         /// </summary>
         public string? SelectedClass
         {
-            get => SearchFilter.Class;
+            get => SearchFilter.Class == null ? AllOption : SearchFilter.Class;
             set
             {
-                if (SearchFilter.Class != value)
+                var actualValue = value == AllOption ? null : value;
+                if (SearchFilter.Class != actualValue)
                 {
-                    _ = OnClassChangedAsync(value);
+                    _ = OnClassChangedAsync(actualValue);
                 }
             }
         }
@@ -392,33 +400,42 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
+        /// 选中的组别（用于级联下拉框）
+        /// </summary>
+        public string? SelectedGroup
+        {
+            get => SearchFilter.GroupName == null ? AllOption : SearchFilter.GroupName;
+            set
+            {
+                var actualValue = value == AllOption ? null : value;
+                if (SearchFilter.GroupName != actualValue)
+                {
+                    SearchFilter.GroupName = actualValue;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+            }
+        }
+
+        /// <summary>
         /// 导入Excel文件
         /// </summary>
         private async Task ImportExcelAsync()
         {
             try
             {
-                var dialog = new OpenFileDialog
+                var dialogViewModel = new ImportParticipantDialogViewModel(_projectRepository, _repository, _excelImportService);
+                var dialog = new Timer.Views.ImportParticipantDialog
                 {
-                    Filter = "Excel文件 (*.xls;*.xlsx)|*.xls;*.xlsx|所有文件 (*.*)|*.*",
-                    Title = "选择要导入的Excel文件"
+                    DataContext = dialogViewModel,
+                    Owner = Application.Current.MainWindow
                 };
 
                 if (dialog.ShowDialog() == true)
                 {
-                    IsLoading = true;
-                    ImportProgress = 0;
-                    ImportResult = null;
+                    ImportResult = dialogViewModel.GetImportResult();
 
-                    try
+                    if (ImportResult != null)
                     {
-                        // 读取Excel文件
-                        var participants = await _excelImportService.ReadFromFileAsync(dialog.FileName);
-
-                        // 导入到数据库
-                        var progress = new Progress<double>(value => ImportProgress = value);
-                        ImportResult = await _excelImportService.ImportAsync(participants, progress);
-
                         if (ImportResult.IsSuccess())
                         {
                             MessageBox.Show(
@@ -451,19 +468,9 @@ namespace Timer.ViewModels
                         // 通知其它页面：人员/分组统计可能变化
                         WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
                         WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
-                    }
-                    catch (Exception ex)
-                    {
-                        _loggingService?.Error($"导入Excel文件失败: {ex.Message}", ex);
-                        MessageBox.Show(
-                            $"导入失败：{ex.Message}",
-                            "错误",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-                    }
-                    finally
-                    {
-                        IsLoading = false;
+
+                        // 3秒后自动隐藏导入结果
+                        _ = HideImportResultAfterDelayAsync();
                     }
                 }
             }
@@ -476,6 +483,15 @@ namespace Timer.ViewModels
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// 延迟后自动隐藏导入结果
+        /// </summary>
+        private async Task HideImportResultAfterDelayAsync()
+        {
+            await Task.Delay(3000);
+            ImportResult = null;
         }
 
         /// <summary>
@@ -499,6 +515,8 @@ namespace Timer.ViewModels
             Classes.Clear();
             GroupNames.Clear();
             CurrentPage = 1;
+            // 重新加载学校列表，会自动设置默认选择"全部"
+            _ = LoadSchoolsAsync();
             _ = LoadParticipantsAsync();
         }
 
@@ -564,7 +582,21 @@ namespace Timer.ViewModels
             finally
             {
                 IsLoading = false;
+                UpdateTotalPages();
             }
+        }
+
+        /// <summary>
+        /// 在列表开头添加"全部"选项
+        /// </summary>
+        private ObservableCollection<string> AddAllOption(IEnumerable<string> items)
+        {
+            var collection = new ObservableCollection<string> { AllOption };
+            foreach (var item in items)
+            {
+                collection.Add(item);
+            }
+            return collection;
         }
 
         /// <summary>
@@ -584,15 +616,18 @@ namespace Timer.ViewModels
             {
                 var currentSchool = SearchFilter.School;
                 var schools = (await _repository.GetDistinctSchoolsAsync()).ToList();
-                Schools = new ObservableCollection<string>(schools);
+                Schools = AddAllOption(schools);
 
-                // 如果当前选择已不存在，则清空；否则保留，并触发级联刷新
+                // 如果当前选择已不存在，则设为"全部"；否则保留，并触发级联刷新
                 if (!string.IsNullOrWhiteSpace(currentSchool) && schools.Contains(currentSchool))
                 {
                     await OnSchoolChangedAsync(currentSchool);
                 }
-                else if (!string.IsNullOrWhiteSpace(currentSchool) && !schools.Contains(currentSchool))
+                else
                 {
+                    // 默认选择"全部"
+                    SearchFilter.School = null;
+                    OnPropertyChanged(nameof(SelectedSchool));
                     await OnSchoolChangedAsync(null);
                 }
             }
@@ -616,7 +651,10 @@ namespace Timer.ViewModels
                 try
                 {
                     var grades = await _repository.GetDistinctGradesAsync(null);
-                    Grades = new ObservableCollection<string>(grades);
+                    Grades = AddAllOption(grades);
+                    // 默认选择"全部"
+                    SearchFilter.Grade = null;
+                    OnPropertyChanged(nameof(SelectedGrade));
                 }
                 catch (Exception ex)
                 {
@@ -636,6 +674,7 @@ namespace Timer.ViewModels
             OnPropertyChanged(nameof(SelectedSchool));
             OnPropertyChanged(nameof(SelectedGrade));
             OnPropertyChanged(nameof(SelectedClass));
+            OnPropertyChanged(nameof(SelectedGroup));
 
             Grades.Clear();
             Classes.Clear();
@@ -646,7 +685,30 @@ namespace Timer.ViewModels
                 try
                 {
                     var grades = await _repository.GetDistinctGradesAsync(school);
-                    Grades = new ObservableCollection<string>(grades);
+                    Grades = AddAllOption(grades);
+                    // 默认选择"全部"
+                    SearchFilter.Grade = null;
+                    OnPropertyChanged(nameof(SelectedGrade));
+                    // 加载该学校的所有班级（因为年级默认是"全部"）
+                    await OnGradeChangedAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载年级列表失败: {ex.Message}", ex);
+                }
+            }
+            else
+            {
+                // 学校选择"全部"时，加载所有年级
+                try
+                {
+                    var grades = await _repository.GetDistinctGradesAsync(null);
+                    Grades = AddAllOption(grades);
+                    // 默认选择"全部"
+                    SearchFilter.Grade = null;
+                    OnPropertyChanged(nameof(SelectedGrade));
+                    // 加载所有班级（因为学校和年级默认都是"全部"）
+                    await OnGradeChangedAsync(null);
                 }
                 catch (Exception ex)
                 {
@@ -671,10 +733,70 @@ namespace Timer.ViewModels
 
             if (!string.IsNullOrWhiteSpace(grade) && !string.IsNullOrWhiteSpace(SearchFilter.School))
             {
+                // 学校有值，年级有值
                 try
                 {
                     var classes = await _repository.GetDistinctClassesAsync(SearchFilter.School, grade);
-                    Classes = new ObservableCollection<string>(classes);
+                    Classes = AddAllOption(classes);
+                    // 默认选择"全部"
+                    SearchFilter.Class = null;
+                    OnPropertyChanged(nameof(SelectedClass));
+                    // 加载组别（因为班级默认是"全部"）
+                    await OnClassChangedAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载班级列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(grade) && !string.IsNullOrWhiteSpace(SearchFilter.School))
+            {
+                // 学校有值，年级选择"全部"时，加载该学校的所有班级
+                try
+                {
+                    var classes = await _repository.GetDistinctClassesAsync(SearchFilter.School, null);
+                    Classes = AddAllOption(classes);
+                    // 默认选择"全部"
+                    SearchFilter.Class = null;
+                    OnPropertyChanged(nameof(SelectedClass));
+                    // 加载组别（因为班级默认是"全部"）
+                    await OnClassChangedAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载班级列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(grade) && string.IsNullOrWhiteSpace(SearchFilter.School))
+            {
+                // 学校选择"全部"，年级有值时，加载该年级的所有班级
+                try
+                {
+                    var classes = await _repository.GetDistinctClassesAsync(null, grade);
+                    Classes = AddAllOption(classes);
+                    // 默认选择"全部"
+                    SearchFilter.Class = null;
+                    OnPropertyChanged(nameof(SelectedClass));
+                    // 加载组别（因为班级默认是"全部"）
+                    await OnClassChangedAsync(null);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载班级列表失败: {ex.Message}", ex);
+                }
+            }
+            else
+            {
+                // 学校选择"全部"，年级选择"全部"时，加载所有班级
+                try
+                {
+                    var classes = await _repository.GetDistinctClassesAsync(null, null);
+                    Classes = AddAllOption(classes);
+                    // 默认选择"全部"
+                    SearchFilter.Class = null;
+                    OnPropertyChanged(nameof(SelectedClass));
+                    // 加载组别（因为班级默认是"全部"）
+                    await OnClassChangedAsync(null);
                 }
                 catch (Exception ex)
                 {
@@ -691,15 +813,132 @@ namespace Timer.ViewModels
             SearchFilter.Class = classValue;
             SearchFilter.GroupName = null;
             OnPropertyChanged(nameof(SelectedClass));
+            OnPropertyChanged(nameof(SelectedGroup));
 
             GroupNames.Clear();
 
             if (!string.IsNullOrWhiteSpace(classValue) && !string.IsNullOrWhiteSpace(SearchFilter.School) && !string.IsNullOrWhiteSpace(SearchFilter.Grade))
             {
+                // 学校、年级、班级都有值
                 try
                 {
                     var groupNames = await _repository.GetDistinctGroupNamesAsync(SearchFilter.School, SearchFilter.Grade, classValue);
-                    GroupNames = new ObservableCollection<string>(groupNames);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(classValue) && !string.IsNullOrWhiteSpace(SearchFilter.School) && !string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校、年级有值，班级选择"全部"时，加载该学校、年级的所有组别
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(SearchFilter.School, SearchFilter.Grade, null);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(classValue) && string.IsNullOrWhiteSpace(SearchFilter.School) && !string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校选择"全部"，年级、班级有值
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(null, SearchFilter.Grade, classValue);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(classValue) && !string.IsNullOrWhiteSpace(SearchFilter.School) && string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校、班级有值，年级选择"全部"
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(SearchFilter.School, null, classValue);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(classValue) && string.IsNullOrWhiteSpace(SearchFilter.School) && !string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校、班级选择"全部"，年级有值
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(null, SearchFilter.Grade, null);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(classValue) && !string.IsNullOrWhiteSpace(SearchFilter.School) && string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校有值，年级、班级选择"全部"
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(SearchFilter.School, null, null);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(classValue) && string.IsNullOrWhiteSpace(SearchFilter.School) && string.IsNullOrWhiteSpace(SearchFilter.Grade))
+            {
+                // 学校、年级选择"全部"，班级有值
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(null, null, classValue);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Error($"加载组别列表失败: {ex.Message}", ex);
+                }
+            }
+            else
+            {
+                // 学校、年级、班级都选择"全部"时，加载所有组别
+                try
+                {
+                    var groupNames = await _repository.GetDistinctGroupNamesAsync(null, null, null);
+                    GroupNames = AddAllOption(groupNames);
+                    // 默认选择"全部"
+                    SearchFilter.GroupName = null;
+                    OnPropertyChanged(nameof(SelectedGroup));
                 }
                 catch (Exception ex)
                 {
