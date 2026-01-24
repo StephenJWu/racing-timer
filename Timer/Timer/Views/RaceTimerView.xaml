@@ -85,7 +85,6 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -195,65 +194,8 @@
             </Grid>
         </Border>
 
-        <!-- 批量操作条（仅当有比赛组时显示） -->
-        <Border Grid.Row="1" 
-                Background="#f8fafc"
-                BorderBrush="#e2e8f0"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,10"
-                Margin="0,0,0,16"
-                Visibility="{Binding HasRaceGroups, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- 全选复选框 -->
-                <CheckBox Grid.Column="0"
-                          IsChecked="{Binding IsSelectAllChecked}"
-                          Command="{Binding ToggleSelectAllCommand}"
-                          VerticalAlignment="Center">
-                    <TextBlock Text="全选" 
-                               FontSize="13"
-                               Foreground="{StaticResource SecondaryTextColorBrush}"/>
-                </CheckBox>
-
-                <!-- 统计信息 -->
-                <TextBlock Grid.Column="1"
-                           Foreground="{StaticResource SecondaryTextColorBrush}" 
-                           FontSize="13"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center">
-                    <Run Text="已添加"/>
-                    <Run Text="{Binding RaceGroups.Count, Mode=OneWay}" FontWeight="SemiBold" Foreground="#6366f1"/>
-                    <Run Text="个分组 · 已选"/>
-                    <Run Text="{Binding SelectedCount, Mode=OneWay}" FontWeight="SemiBold" Foreground="#22c55e"/>
-                    <Run Text="个"/>
-                </TextBlock>
-
-                <!-- 批量操作按钮 -->
-                <Button Grid.Column="2"
-                        Content="▶ 批量启动"
-                        Command="{Binding StartSelectedRacesCommand}"
-                        Background="#22c55e"
-                        Foreground="White"
-                        Margin="0,0,8,0"
-                        Style="{StaticResource SmallActionButton}"/>
-                <Button Grid.Column="3"
-                        Content="⏹ 批量停止"
-                        Command="{Binding StopSelectedRacesCommand}"
-                        Background="#ef4444"
-                        Foreground="White"
-                        Style="{StaticResource SmallActionButton}"/>
-            </Grid>
-        </Border>
-
         <!-- 加载指示器 -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="1"
                 Background="#fffbeb"
                 BorderBrush="#fde68a"
                 BorderThickness="1"
@@ -271,7 +213,7 @@
         </Border>
 
         <!-- 空状态提示 -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="1"
                 Visibility="{Binding HasRaceGroups, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
@@ -291,7 +233,7 @@
         </Border>
 
         <!-- 比赛分组列表 -->
-        <ScrollViewer Grid.Row="2"
+        <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Visibility="{Binding HasRaceGroups, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -322,12 +264,10 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- 选择框 + 展开按钮 -->
+                                        <!-- 展开按钮 -->
                                         <StackPanel Grid.Column="0" 
                                                     Orientation="Horizontal"
                                                     VerticalAlignment="Center">
-                                            <CheckBox IsChecked="{Binding IsSelected}"
-                                                      Margin="0,0,8,0"/>
                                             <Button Command="{Binding DataContext.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="Transparent"

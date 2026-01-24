@@ -102,6 +102,16 @@ namespace Timer.ViewModels
             };
             groupItem.Command = NavigateCommand;
 
+            var projectItem = new NavigationItem
+            {
+                Title = "项目管理",
+                Icon = "📁",
+                IconColor = "#f59e0b",  // 琥珀色
+                ViewModel = CreateProjectViewModel()
+            };
+            projectItem.Command = NavigateCommand;
+
+            participantManagementItem.Children.Add(projectItem);
             participantManagementItem.Children.Add(participantItem);
             participantManagementItem.Children.Add(groupItem);
             participantManagementItem.Command = ToggleExpandCommand;
@@ -217,7 +227,8 @@ namespace Timer.ViewModels
         {
             var repository = new ParticipantRepository(_dbContext);
             var excelImportService = new ExcelImportService(repository);
-            return new ParticipantViewModel(repository, excelImportService, _dbContext);
+            var projectRepository = new ProjectRepository(_dbContext);
+            return new ParticipantViewModel(repository, excelImportService, projectRepository, _dbContext);
         }
 
         /// <summary>
@@ -240,6 +251,15 @@ namespace Timer.ViewModels
             var raceGroupRepo = new RaceGroupRepository(_dbContext);
             var exportService = new RaceGroupExportService();
             return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService);
+        }
+
+        /// <summary>
+        /// 创建ProjectViewModel实例（带依赖注入）
+        /// </summary>
+        private ProjectViewModel CreateProjectViewModel()
+        {
+            var repository = new ProjectRepository(_dbContext);
+            return new ProjectViewModel(repository);
         }
 
         /// <summary>

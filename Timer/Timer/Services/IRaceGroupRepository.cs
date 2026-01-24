@@ -20,9 +20,9 @@ namespace Timer.Services
         /// <param name="groupName">组别（可选）</param>
         /// <returns>符合条件的分组列表</returns>
         Task<IEnumerable<RaceGroup>> QueryRaceGroupsAsync(
-            System.DateTime startDate,
-            System.DateTime endDate,
-            string school,
+            System.DateTime? startDate,
+            System.DateTime? endDate,
+            string? school,
             string? grade = null,
             string? classValue = null,
             string? groupName = null);

@@ -260,8 +260,8 @@ namespace Timer.Services
             var command = connection.CreateCommand();
 
             command.CommandText = @"
-                INSERT INTO Participants (SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt)
-                VALUES (@sequenceNumber, @date, @school, @grade, @class, @name, @gender, @examNumber, @groupName, @bibNumber, @chipNumber, @createdAt, @updatedAt);
+                INSERT INTO Participants (ProjectId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt)
+                VALUES (@projectId, @sequenceNumber, @date, @school, @grade, @class, @name, @gender, @examNumber, @groupName, @bibNumber, @chipNumber, @createdAt, @updatedAt);
                 SELECT last_insert_rowid();
             ";
 
@@ -293,7 +293,7 @@ namespace Timer.Services
 
             command.CommandText = @"
                 UPDATE Participants
-                SET SequenceNumber = @sequenceNumber, Date = @date, School = @school, Grade = @grade, Class = @class,
+                SET ProjectId = @projectId, SequenceNumber = @sequenceNumber, Date = @date, School = @school, Grade = @grade, Class = @class,
                     Name = @name, Gender = @gender, ExamNumber = @examNumber, GroupName = @groupName,
                     BibNumber = @bibNumber, ChipNumber = @chipNumber, UpdatedAt = @updatedAt
                 WHERE Id = @id
@@ -351,6 +351,20 @@ namespace Timer.Services
             {
                 command.Parameters.Add(new SqliteParameter($"@id{i}", idList[i]));
             }
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// 根据项目ID删除所有参赛人员
+        /// </summary>
+        public async Task DeleteByProjectIdAsync(int projectId)
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+            var command = connection.CreateCommand();
+
+            command.CommandText = "DELETE FROM Participants WHERE ProjectId = @projectId";
+            command.Parameters.Add(new SqliteParameter("@projectId", projectId));
 
             await command.ExecuteNonQueryAsync();
         }
@@ -449,6 +463,7 @@ namespace Timer.Services
         /// </summary>
         private void AddParticipantParameters(SqliteCommand command, Participant participant)
         {
+            command.Parameters.Add(new SqliteParameter("@projectId", participant.ProjectId.HasValue ? participant.ProjectId.Value : (object)DBNull.Value));
             command.Parameters.Add(new SqliteParameter("@sequenceNumber", participant.SequenceNumber));
             command.Parameters.Add(new SqliteParameter("@date", participant.Date.ToString("yyyy-MM-dd HH:mm:ss")));
             command.Parameters.Add(new SqliteParameter("@school", participant.School ?? (object)DBNull.Value));

@@ -29,8 +29,8 @@ namespace Timer.ViewModels
         private bool _disposed;
 
         // 查询条件
-        private DateTime _startDate;
-        private DateTime _endDate;
+        private DateTime? _startDate;
+        private DateTime? _endDate;
         private string? _selectedSchool;
         private string? _selectedGrade;
         private string? _selectedClass;
@@ -56,10 +56,6 @@ namespace Timer.ViewModels
             _loggingService = loggingService;
 
             Title = "人员分组";
-
-            // 初始化日期为当天
-            _startDate = DateTime.Today;
-            _endDate = DateTime.Today;
 
             // 初始化集合
             Schools = new ObservableCollection<string>();
@@ -156,13 +152,13 @@ namespace Timer.ViewModels
         public string Title { get; }
 
         // 查询条件属性
-        public DateTime StartDate
+        public DateTime? StartDate
         {
             get => _startDate;
             set => SetProperty(ref _startDate, value);
         }
 
-        public DateTime EndDate
+        public DateTime? EndDate
         {
             get => _endDate;
             set => SetProperty(ref _endDate, value);
@@ -274,6 +270,9 @@ namespace Timer.ViewModels
                 {
                     Schools.Add(school);
                 }
+                // 默认选择"全部"
+                _selectedSchool = "全部";
+                OnPropertyChanged(nameof(SelectedSchool));
 
                 // 加载芯片组列表
                 var chipGroups = await _chipRepository.GetAllChipGroupsAsync();
@@ -282,11 +281,92 @@ namespace Timer.ViewModels
                 {
                     ChipGroups.Add(chipGroup);
                 }
+
+                // 加载年级、班级、组别（因为学校默认是"全部"）
+                await LoadGradesAsync(null);
             }
             catch (Exception ex)
             {
                 _loggingService?.Error($"加载初始数据失败: {ex.Message}", ex);
                 MessageBox.Show($"加载初始数据失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 加载年级列表
+        /// </summary>
+        private async Task LoadGradesAsync(string? school)
+        {
+            try
+            {
+                var grades = await _participantRepository.GetDistinctGradesAsync(school);
+                Grades.Clear();
+                Grades.Add("全部");
+                foreach (var grade in grades)
+                {
+                    Grades.Add(grade);
+                }
+                // 默认选择"全部"
+                _selectedGrade = "全部";
+                OnPropertyChanged(nameof(SelectedGrade));
+
+                // 加载班级（因为年级默认是"全部"）
+                await LoadClassesAsync(school, null);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载年级失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 加载班级列表
+        /// </summary>
+        private async Task LoadClassesAsync(string? school, string? grade)
+        {
+            try
+            {
+                var classes = await _participantRepository.GetDistinctClassesAsync(school, grade);
+                Classes.Clear();
+                Classes.Add("全部");
+                foreach (var cls in classes)
+                {
+                    Classes.Add(cls);
+                }
+                // 默认选择"全部"
+                _selectedClass = "全部";
+                OnPropertyChanged(nameof(SelectedClass));
+
+                // 加载组别（因为班级默认是"全部"）
+                await LoadGroupsAsync(school, grade, null);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载班级失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 加载组别列表
+        /// </summary>
+        private async Task LoadGroupsAsync(string? school, string? grade, string? classValue)
+        {
+            try
+            {
+                var groups = await _participantRepository.GetDistinctGroupNamesAsync(school, grade, classValue);
+                Groups.Clear();
+                Groups.Add("全部");
+                foreach (var group in groups)
+                {
+                    Groups.Add(group);
+                }
+                // 默认选择"全部"
+                _selectedGroup = "全部";
+                OnPropertyChanged(nameof(SelectedGroup));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载组别失败: {ex.Message}", ex);
             }
         }
 
@@ -315,28 +395,9 @@ namespace Timer.ViewModels
             Grades.Clear();
             Classes.Clear();
             Groups.Clear();
-            SelectedGrade = null;
-            SelectedClass = null;
-            SelectedGroup = null;
 
-            if (string.IsNullOrWhiteSpace(SelectedSchool) || SelectedSchool == "全部")
-            {
-                return;
-            }
-
-            try
-            {
-                var grades = await _participantRepository.GetDistinctGradesAsync(SelectedSchool);
-                Grades.Add("全部");
-                foreach (var grade in grades)
-                {
-                    Grades.Add(grade);
-                }
-            }
-            catch (Exception ex)
-            {
-                _loggingService?.Error($"加载年级失败: {ex.Message}", ex);
-            }
+            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
+            await LoadGradesAsync(school);
         }
 
         /// <summary>
@@ -346,27 +407,10 @@ namespace Timer.ViewModels
         {
             Classes.Clear();
             Groups.Clear();
-            SelectedClass = null;
-            SelectedGroup = null;
 
-            if (string.IsNullOrWhiteSpace(SelectedGrade) || SelectedGrade == "全部")
-            {
-                return;
-            }
-
-            try
-            {
-                var classes = await _participantRepository.GetDistinctClassesAsync(SelectedSchool, SelectedGrade);
-                Classes.Add("全部");
-                foreach (var cls in classes)
-                {
-                    Classes.Add(cls);
-                }
-            }
-            catch (Exception ex)
-            {
-                _loggingService?.Error($"加载班级失败: {ex.Message}", ex);
-            }
+            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
+            var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
+            await LoadClassesAsync(school, grade);
         }
 
         /// <summary>
@@ -375,26 +419,11 @@ namespace Timer.ViewModels
         private async void OnClassChanged()
         {
             Groups.Clear();
-            SelectedGroup = null;
 
-            if (string.IsNullOrWhiteSpace(SelectedClass) || SelectedClass == "全部")
-            {
-                return;
-            }
-
-            try
-            {
-                var groups = await _participantRepository.GetDistinctGroupNamesAsync(SelectedSchool, SelectedGrade, SelectedClass);
-                Groups.Add("全部");
-                foreach (var group in groups)
-                {
-                    Groups.Add(group);
-                }
-            }
-            catch (Exception ex)
-            {
-                _loggingService?.Error($"加载组别失败: {ex.Message}", ex);
-            }
+            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
+            var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
+            var classValue = (SelectedClass == "全部") ? null : SelectedClass;
+            await LoadGroupsAsync(school, grade, classValue);
         }
 
         /// <summary>
@@ -402,15 +431,9 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task QueryAsync()
         {
-            // 验证必填项
-            if (string.IsNullOrWhiteSpace(SelectedSchool) || SelectedSchool == "全部")
-            {
-                MessageBox.Show("请选择学校", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             try
             {
+                var school = (SelectedSchool == "全部") ? null : SelectedSchool;
                 var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
                 var classValue = (SelectedClass == "全部") ? null : SelectedClass;
                 var groupName = (SelectedGroup == "全部") ? null : SelectedGroup;
@@ -418,7 +441,7 @@ namespace Timer.ViewModels
                 var raceGroups = await _raceGroupRepository.QueryRaceGroupsAsync(
                     StartDate,
                     EndDate,
-                    SelectedSchool,
+                    school,
                     grade,
                     classValue,
                     groupName);

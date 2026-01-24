@@ -32,6 +32,7 @@ namespace Timer.Services
             Register<ScoreViewModel, ScoreView>();
             Register<ParticipantViewModel, ParticipantView>();
             Register<GroupViewModel, GroupView>();
+            Register<ProjectViewModel, ProjectView>();
             Register<DeviceViewModel, DeviceView>();
             Register<ChipViewModel, ChipView>();
         }

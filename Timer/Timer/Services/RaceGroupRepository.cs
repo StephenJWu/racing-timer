@@ -31,34 +31,40 @@ namespace Timer.Services
         /// 根据条件查询比赛分组
         /// </summary>
         public async Task<IEnumerable<RaceGroup>> QueryRaceGroupsAsync(
-            DateTime startDate,
-            DateTime endDate,
-            string school,
+            DateTime? startDate,
+            DateTime? endDate,
+            string? school,
             string? grade = null,
             string? classValue = null,
             string? groupName = null)
         {
-            if (string.IsNullOrWhiteSpace(school))
-            {
-                throw new ArgumentNullException(nameof(school), "学校不能为空");
-            }
-
             var connection = await _dbContext.GetConnectionAsync();
 
             // 首先查询符合条件的参赛人员分组信息
             var participantCommand = connection.CreateCommand();
             var whereClauses = new List<string>
             {
-                "substr(Date, 1, 10) >= @startDate",
-                "substr(Date, 1, 10) <= @endDate",
-                "School = @school",
                 "GroupName IS NOT NULL",
                 "GroupName != ''"
             };
 
-            participantCommand.Parameters.Add(new SqliteParameter("@startDate", startDate.ToString("yyyy-MM-dd")));
-            participantCommand.Parameters.Add(new SqliteParameter("@endDate", endDate.ToString("yyyy-MM-dd")));
-            participantCommand.Parameters.Add(new SqliteParameter("@school", school));
+            if (startDate.HasValue)
+            {
+                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
+                participantCommand.Parameters.Add(new SqliteParameter("@startDate", startDate.Value.ToString("yyyy-MM-dd")));
+            }
+
+            if (endDate.HasValue)
+            {
+                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
+                participantCommand.Parameters.Add(new SqliteParameter("@endDate", endDate.Value.ToString("yyyy-MM-dd")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(school))
+            {
+                whereClauses.Add("School = @school");
+                participantCommand.Parameters.Add(new SqliteParameter("@school", school));
+            }
 
             if (!string.IsNullOrWhiteSpace(grade))
             {
