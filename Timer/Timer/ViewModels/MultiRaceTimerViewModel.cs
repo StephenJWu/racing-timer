@@ -21,6 +21,7 @@ namespace Timer.ViewModels
         private readonly IRaceGroupRepository _raceGroupRepository;
         private readonly IParticipantRepository _participantRepository;
         private readonly ITimerService _timerService;
+        private readonly ILoggingService? _loggingService;
         private bool _disposed;
 
         /// <summary>
@@ -75,11 +76,15 @@ namespace Timer.ViewModels
         public MultiRaceTimerViewModel(
             IRaceGroupRepository raceGroupRepository,
             IParticipantRepository participantRepository,
-            ITimerService timerService)
+            ITimerService timerService,
+            ILoggingService? loggingService = null)
         {
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
             _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
+            _loggingService = loggingService;
+
+            _loggingService?.Debug("MultiRaceTimerViewModel 初始化");
 
             // 加载可用分组 + 注册跨页面实时刷新（显式注册，避免多 IRecipient<> 时 Register(this) 歧义）
             WeakReferenceMessenger.Default.Register<ChipGroupUpdatedMessage>(this);
@@ -247,20 +252,29 @@ namespace Timer.ViewModels
                     var timingInfo = CreateTimingInfoFromGroup(group, activeRace.TotalLaps);
                     timingInfo.RaceRecordId = activeRace.Id;
 
-                    // 恢复计时状态
-                    if (activeRace.Status == RaceStatus.Running)
-                    {
-                        timingInfo.StartTimer(activeRace.StartTime);
-                    }
-                    else if (activeRace.Status == RaceStatus.Paused)
-                    {
-                        timingInfo.StartTimer(activeRace.StartTime);
-                        timingInfo.PauseTimer();
-                    }
-
                     // 加载参赛者和圈次记录
                     await LoadParticipantsForGroupAsync(timingInfo);
                     await RestoreLapRecordsAsync(timingInfo, activeRace.Id);
+
+                    // 恢复计时状态
+                    if (activeRace.Status == RaceStatus.Running || activeRace.Status == RaceStatus.Paused)
+                    {
+                        // 标记所有未完成的参赛者为比赛中
+                        foreach (var p in timingInfo.Participants.Where(p => !p.IsCompleted))
+                        {
+                            p.IsRacing = true;
+                        }
+                        
+                        if (activeRace.Status == RaceStatus.Running)
+                        {
+                            timingInfo.StartTimer(activeRace.StartTime);
+                        }
+                        else
+                        {
+                            timingInfo.StartTimer(activeRace.StartTime);
+                            timingInfo.PauseTimer();
+                        }
+                    }
 
                     RaceGroups.Add(timingInfo);
                     
@@ -425,6 +439,8 @@ namespace Timer.ViewModels
                     p.IsCompleted = false;
                     p.IsLeading = false;
                     p.Rank = 0;
+                    p.IsRacing = true;  // 标记比赛开始
+                    p.LiveElapsedTime = TimeSpan.Zero;  // 重置实时用时
                 }
 
                 UpdateSelectionState();
@@ -476,7 +492,7 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 停止单个比赛组
+        /// 重跑（停止并重置比赛，可重新开始）
         /// </summary>
         [RelayCommand]
         private async Task StopSingleRaceAsync(RaceGroupTimingInfo group)
@@ -484,22 +500,46 @@ namespace Timer.ViewModels
             if (group == null || !group.CanStop) return;
 
             var result = MessageBox.Show(
-                $"确定要停止 [{group.DisplayName}] 的比赛吗？",
-                "确认停止",
+                $"确定要对 [{group.DisplayName}] 执行重跑吗？\n\n计时器和所有参赛者的成绩将被清零，可重新开始比赛。",
+                "确认重跑",
                 MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                MessageBoxImage.Warning);
 
             if (result != MessageBoxResult.Yes) return;
 
             try
             {
                 await _timerService.StopRaceAsync(group.RaceRecordId);
-                group.StopTimer(RaceStatus.Stopped);
+                
+                // 重置计时器（清零）
+                group.ResetTimer();
+                group.RaceRecordId = 0;  // 清除比赛记录ID，以便重新开始
+                
+                // 重置所有参赛者的状态和成绩
+                foreach (var p in group.Participants)
+                {
+                    p.IsRacing = false;
+                    p.CurrentLap = 0;
+                    p.TotalTime = TimeSpan.Zero;
+                    p.LastLapTime = null;
+                    p.LapTimes.Clear();
+                    p.IsCompleted = false;
+                    p.IsLeading = false;
+                    p.Rank = 0;
+                    p.LiveElapsedTime = TimeSpan.Zero;
+                    p.NotifyAllLapsChanged();
+                }
+                
+                // 重置完成人数
+                group.CompletedCount = 0;
+                
                 UpdateSelectionState();
+                
+                MessageBox.Show($"[{group.DisplayName}] 已重置，可重新开始比赛。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"停止比赛失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"重跑失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -557,6 +597,12 @@ namespace Timer.ViewModels
                 {
                     await _timerService.StopRaceAsync(group.RaceRecordId);
                     group.StopTimer(RaceStatus.Stopped);
+                    
+                    // 重置参赛者的比赛状态
+                    foreach (var p in group.Participants)
+                    {
+                        p.IsRacing = false;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -683,6 +729,13 @@ namespace Timer.ViewModels
             {
                 await _timerService.CompleteRaceAsync(group.RaceRecordId);
                 group.StopTimer(RaceStatus.Completed);
+                
+                // 重置参赛者的比赛状态（虽然已完成，但语义上比赛已结束）
+                foreach (var p in group.Participants)
+                {
+                    p.IsRacing = false;
+                }
+                
                 UpdateSelectionState();
 
                 MessageBox.Show($"[{group.DisplayName}] 比赛已完成！所有选手都已完成比赛。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);

@@ -53,6 +53,43 @@ namespace Timer.Services
         /// 删除圈次记录
         /// </summary>
         Task<bool> DeleteAsync(int id);
+
+        /// <summary>
+        /// 获取多个参赛者的最终成绩（最后一圈的圈数和累计用时）
+        /// </summary>
+        /// <param name="participantIds">参赛者ID列表</param>
+        /// <returns>字典：key为参赛者ID，value为(圈数, 累计用时毫秒)</returns>
+        Task<Dictionary<int, (int Laps, long TotalTimeMs)>> GetFinalScoresAsync(IEnumerable<int> participantIds);
+
+        /// <summary>
+        /// 查询成绩结果（关联RaceRecords、RaceGroups、Participants）
+        /// </summary>
+        Task<List<ScoreResult>> SearchScoresAsync(ScoreSearchFilter filter);
+
+        /// <summary>
+        /// 获取成绩查询的总记录数
+        /// </summary>
+        Task<int> GetScoresTotalCountAsync(ScoreSearchFilter filter);
+
+        /// <summary>
+        /// 获取成绩查询中所有学校列表
+        /// </summary>
+        Task<List<string>> GetScoreSchoolsAsync();
+
+        /// <summary>
+        /// 获取指定学校下的年级列表
+        /// </summary>
+        Task<List<string>> GetScoreGradesAsync(string school);
+
+        /// <summary>
+        /// 获取指定学校和年级下的班级列表
+        /// </summary>
+        Task<List<string>> GetScoreClassesAsync(string school, string grade);
+
+        /// <summary>
+        /// 获取指定学校、年级、班级下的组别列表
+        /// </summary>
+        Task<List<string>> GetScoreGroupNamesAsync(string school, string grade, string className);
     }
 }
 

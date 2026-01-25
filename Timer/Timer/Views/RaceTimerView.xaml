@@ -62,21 +62,42 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                BorderBrush="Transparent"
+                                BorderThickness="2">
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="2" 
+                                                  BlurRadius="4" 
+                                                  Opacity="0.3" 
+                                                  Direction="270"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" 
                                             VerticalAlignment="Center"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="1" 
+                                                          BlurRadius="2" 
+                                                          Opacity="0.2" 
+                                                          Direction="270"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Opacity" Value="0.5"/>
-                </Trigger>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Opacity" Value="0.85"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -94,7 +115,6 @@
                 Margin="0,0,0,16">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -127,44 +147,8 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- 快速记圈区域 -->
-                <Border Grid.Column="1" 
-                        Background="#faf5ff"
-                        BorderBrush="#e9d5ff"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,8"
-                        Margin="24,0"
-                        Visibility="{Binding HasActiveRaces, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="⚡ 快速记圈" 
-                                   FontSize="13" 
-                                   FontWeight="SemiBold"
-                                   Foreground="#7c3aed"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,12,0"/>
-                        <TextBox Text="{Binding QuickLapInput, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="160"
-                                 Height="32"
-                                 FontSize="13"
-                                 VerticalContentAlignment="Center">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding QuickRecordLapCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
-                        <Button Content="记圈"
-                                Command="{Binding QuickRecordLapCommand}"
-                                Background="#8b5cf6"
-                                Foreground="White"
-                                Height="32"
-                                Padding="16,0"
-                                Margin="8,0,0,0"
-                                Style="{StaticResource SmallActionButton}"/>
-                    </StackPanel>
-                </Border>
-
                 <!-- 标题栏右侧：添加比赛组 -->
-                <StackPanel Grid.Column="2"
+                <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <TextBlock Text="➕ 添加比赛组:" 
@@ -250,24 +234,33 @@
                                 </Grid.RowDefinitions>
 
                                 <!-- 分组头部 -->
-                                <Border Grid.Row="0" 
-                                        Padding="16"
-                                        BorderBrush="{StaticResource BorderColorBrush}"
-                                        BorderThickness="0,0,0,1">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- 左侧芯片组颜色条 -->
+                                    <Border Grid.Column="0"
+                                            Background="{Binding ChipGroupColor, Converter={StaticResource HexColorToBrushConverter}}"
+                                            CornerRadius="4,0,0,4"/>
+                                    
+                                    <Border Grid.Column="1" 
+                                            Padding="16"
+                                            BorderBrush="{StaticResource BorderColorBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- 展开按钮 -->
-                                        <StackPanel Grid.Column="0" 
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center">
+                                            <!-- 展开按钮 -->
+                                            <StackPanel Grid.Column="0" 
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center">
                                             <Button Command="{Binding DataContext.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="Transparent"
@@ -320,25 +313,16 @@
                                         </StackPanel>
 
                                         <!-- 分组信息 -->
-                                        <StackPanel Grid.Column="1" 
-                                                    Margin="12,0,0,0"
-                                                    VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal">
-                                                <!-- 颜色标记 -->
-                                                <Rectangle Width="4" Height="20"
-                                                           RadiusX="2" RadiusY="2"
-                                                           Fill="{Binding ChipGroupColor, Converter={StaticResource HexColorToBrushConverter}}"
-                                                           Margin="0,0,10,0"
-                                                           VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" 
+                                                        Margin="12,0,0,0"
+                                                        VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding DisplayName}" 
                                                            FontSize="15"
                                                            FontWeight="SemiBold"
                                                            Foreground="{StaticResource TextColorBrush}"/>
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" 
-                                                        Margin="14,4,0,0">
                                                 <TextBlock FontSize="12" 
-                                                           Foreground="{StaticResource SecondaryTextColorBrush}">
+                                                           Foreground="{StaticResource SecondaryTextColorBrush}"
+                                                           Margin="0,4,0,0">
                                                     <Run Text="芯片组:"/>
                                                     <Run Text="{Binding ChipGroupName}" FontWeight="Medium"/>
                                                     <Run Text=" · "/>
@@ -348,190 +332,189 @@
                                                     <Run Text="圈"/>
                                                 </TextBlock>
                                             </StackPanel>
-                                        </StackPanel>
 
-                                        <!-- 计时器显示 -->
-                                        <Border Grid.Column="2"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Padding="16,8"
-                                                CornerRadius="8"
-                                                Margin="20,0">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Background" Value="#f1f5f9"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Running">
-                                                            <Setter Property="Background">
-                                                                <Setter.Value>
-                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                                        <GradientStop Color="#dcfce7" Offset="0"/>
-                                                                        <GradientStop Color="#d1fae5" Offset="1"/>
-                                                                    </LinearGradientBrush>
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="Paused">
-                                                            <Setter Property="Background" Value="#fef3c7"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock Text="{Binding ElapsedTimeDisplay}" 
-                                                       FontSize="24"
-                                                       FontWeight="Bold"
-                                                       FontFamily="Consolas">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#64748b"/>
+                                        <!-- 计时器显示 + 状态标签 -->
+                                        <StackPanel Grid.Column="2"
+                                                    Orientation="Horizontal"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Margin="20,0">
+                                            <Border Padding="16,8"
+                                                    CornerRadius="8">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#f1f5f9"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Status}" Value="Running">
-                                                                <Setter Property="Foreground" Value="#16a34a"/>
+                                                                <Setter Property="Background">
+                                                                    <Setter.Value>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                            <GradientStop Color="#dcfce7" Offset="0"/>
+                                                                            <GradientStop Color="#d1fae5" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Setter.Value>
+                                                                </Setter>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Status}" Value="Paused">
-                                                                <Setter Property="Foreground" Value="#d97706"/>
+                                                                <Setter Property="Background" Value="#fef3c7"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Border>
-
-                                        <!-- 状态标签 -->
-                                        <Border Grid.Column="3"
-                                                Style="{StaticResource StatusBadgeStyle}"
-                                                Background="{Binding StatusColorHex, Converter={StaticResource HexColorToBrushConverter}}"
-                                                Margin="0,0,16,0">
-                                            <TextBlock Text="{Binding StatusText}" 
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="White"/>
-                                        </Border>
-
-                                        <!-- 进度条 -->
-                                        <StackPanel Grid.Column="4" 
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding ElapsedTimeDisplay}" 
+                                                           FontSize="24"
+                                                           FontWeight="Bold"
+                                                           FontFamily="Consolas">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#64748b"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Running">
+                                                                    <Setter Property="Foreground" Value="#16a34a"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Paused">
+                                                                    <Setter Property="Foreground" Value="#d97706"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                            
+                                            <!-- 状态标签（徽章样式） -->
+                                            <Border CornerRadius="12"
+                                                    Padding="12,4"
+                                                    Margin="12,0,0,0"
                                                     VerticalAlignment="Center"
-                                                    Width="120"
-                                                    Margin="0,0,16,0"
-                                                    Visibility="{Binding IsRaceActive, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <TextBlock FontSize="11" 
-                                                       Foreground="{StaticResource SecondaryTextColorBrush}"
-                                                       Margin="0,0,0,4">
-                                                <Run Text="完成:"/>
-                                                <Run Text="{Binding CompletedCount}"/>
-                                                <Run Text="/"/>
-                                                <Run Text="{Binding ParticipantCount}"/>
-                                            </TextBlock>
-                                            <Border Background="#e2e8f0" 
-                                                    Height="6" 
-                                                    CornerRadius="3">
-                                                <Border Background="#22c55e" 
-                                                        HorizontalAlignment="Left"
-                                                        CornerRadius="3"
-                                                        Width="{Binding ProgressPercentage, Converter={StaticResource PercentageToWidthConverter}}"/>
+                                                    Background="{Binding StatusColorHex, Converter={StaticResource HexColorToBrushConverter}}"
+                                                    Opacity="0.9">
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White"
+                                                           VerticalAlignment="Center"/>
                                             </Border>
                                         </StackPanel>
 
                                         <!-- 操作按钮 -->
-                                        <StackPanel Grid.Column="5" 
+                                        <StackPanel Grid.Column="3" 
                                                     Orientation="Horizontal"
                                                     VerticalAlignment="Center">
                                             <!-- 开始按钮 -->
-                                            <Button Content="▶ 开始"
-                                                    Command="{Binding DataContext.StartSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <Button Command="{Binding DataContext.StartSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="#22c55e"
                                                     Foreground="White"
-                                                    Margin="0,0,6,0"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Padding="16,8"
+                                                    Margin="0,0,8,0"
                                                     Visibility="{Binding CanStart, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Style="{StaticResource SmallActionButton}"/>
+                                                    Style="{StaticResource SmallActionButton}">
+                                                <TextBlock Text="▶ 开始" FontSize="24" FontWeight="Bold"/>
+                                            </Button>
                                             
                                             <!-- 暂停按钮 -->
-                                            <Button Content="⏸ 暂停"
-                                                    Command="{Binding DataContext.PauseSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <Button Command="{Binding DataContext.PauseSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="#f59e0b"
                                                     Foreground="White"
-                                                    Margin="0,0,6,0"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Padding="16,8"
+                                                    Margin="0,0,8,0"
                                                     Visibility="{Binding CanPause, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Style="{StaticResource SmallActionButton}"/>
+                                                    Style="{StaticResource SmallActionButton}">
+                                                <TextBlock Text="⏸ 暂停" FontSize="24" FontWeight="Bold"/>
+                                            </Button>
                                             
                                             <!-- 继续按钮 -->
-                                            <Button Content="▶ 继续"
-                                                    Command="{Binding DataContext.ResumeSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <Button Command="{Binding DataContext.ResumeSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="#3b82f6"
                                                     Foreground="White"
-                                                    Margin="0,0,6,0"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Padding="16,8"
+                                                    Margin="0,0,8,0"
                                                     Visibility="{Binding CanResume, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Style="{StaticResource SmallActionButton}"/>
+                                                    Style="{StaticResource SmallActionButton}">
+                                                <TextBlock Text="▶ 继续" FontSize="24" FontWeight="Bold"/>
+                                            </Button>
                                             
-                                            <!-- 停止按钮 -->
-                                            <Button Content="⏹ 停止"
-                                                    Command="{Binding DataContext.StopSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <!-- 重跑按钮 -->
+                                            <Button Command="{Binding DataContext.StopSingleRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="#ef4444"
                                                     Foreground="White"
-                                                    Margin="0,0,6,0"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Padding="16,8"
+                                                    Margin="0,0,8,0"
                                                     Visibility="{Binding CanStop, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Style="{StaticResource SmallActionButton}"/>
+                                                    Style="{StaticResource SmallActionButton}">
+                                                <TextBlock Text="⏹ 重跑" FontSize="24" FontWeight="Bold"/>
+                                            </Button>
 
                                             <!-- 移除按钮（仅当比赛未开始时显示） -->
-                                            <Button Content="✕"
-                                                    Command="{Binding DataContext.RemoveGroupFromRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            <Button Command="{Binding DataContext.RemoveGroupFromRaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     Background="#94a3b8"
                                                     Foreground="White"
-                                                    Width="28"
-                                                    Height="28"
-                                                    Padding="0"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Padding="16,8"
                                                     ToolTip="从列表移除"
                                                     Visibility="{Binding CanStart, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Style="{StaticResource SmallActionButton}"/>
+                                                    Style="{StaticResource SmallActionButton}">
+                                                <TextBlock Text="✕ 移除" FontSize="24" FontWeight="Bold"/>
+                                            </Button>
                                         </StackPanel>
-                                    </Grid>
-                                </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
 
                                 <!-- 展开的参赛者列表 -->
                                 <Border Grid.Row="1"
                                         Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibilityConverter}}"
                                         Background="#fafafa"
                                         Padding="16">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <!-- 参赛者列表标题 -->
-                                        <StackPanel Grid.Row="0" 
-                                                    Orientation="Horizontal"
-                                                    Margin="0,0,0,12">
-                                            <Rectangle Width="3" Height="16"
-                                                       Fill="#6366f1"
-                                                       RadiusX="1.5" RadiusY="1.5"
-                                                       Margin="0,0,8,0"/>
-                                            <TextBlock Text="参赛者成绩"
-                                                       FontSize="14"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{StaticResource TextColorBrush}"/>
-                                            <TextBlock Text="{Binding Participants.Count, StringFormat=' ({0}人)'}"
-                                                       FontSize="13"
-                                                       Foreground="{StaticResource SecondaryTextColorBrush}"
-                                                       VerticalAlignment="Center"/>
-                                        </StackPanel>
-
-                                        <!-- 参赛者表格 -->
-                                        <DataGrid Grid.Row="1"
-                                                  ItemsSource="{Binding Participants}"
-                                                  AutoGenerateColumns="False"
-                                                  CanUserSortColumns="True"
-                                                  CanUserReorderColumns="False"
-                                                  CanUserResizeColumns="True"
-                                                  MaxHeight="300"
-                                                  BorderThickness="1"
-                                                  BorderBrush="{StaticResource BorderColorBrush}">
-                                            <DataGrid.Columns>
+                                    <!-- 参赛者表格 -->
+                                    <DataGrid ItemsSource="{Binding Participants}"
+                                              AutoGenerateColumns="False"
+                                              CanUserSortColumns="True"
+                                              CanUserReorderColumns="False"
+                                              CanUserResizeColumns="True"
+                                              MaxHeight="300"
+                                              RowHeight="40"
+                                              ColumnHeaderHeight="40"
+                                              BorderThickness="1"
+                                              BorderBrush="{StaticResource BorderColorBrush}">
+                                        <!-- 单元格样式：垂直居中，左对齐 -->
+                                        <DataGrid.CellStyle>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="VerticalAlignment" Value="Stretch"/>
+                                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="DataGridCell">
+                                                            <Grid Background="{TemplateBinding Background}">
+                                                                <ContentPresenter VerticalAlignment="Center" Margin="4,0"/>
+                                                            </Grid>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </DataGrid.CellStyle>
+                                        <!-- 表头样式：左对齐，垂直居中 -->
+                                        <DataGrid.ColumnHeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                                <Setter Property="Padding" Value="4,0"/>
+                                            </Style>
+                                        </DataGrid.ColumnHeaderStyle>
+                                        <DataGrid.Columns>
                                                 <!-- 排名 -->
                                                 <DataGridTextColumn Header="排名" 
                                                                     Binding="{Binding Rank}" 
@@ -539,21 +522,23 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontWeight" Value="Bold"/>
                                                             <Setter Property="Foreground" Value="#6366f1"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
 
-                                                <!-- 号码布 -->
-                                                <DataGridTextColumn Header="号码布" 
+                                                <!-- 芯片外部号码 -->
+                                                <DataGridTextColumn Header="芯片外部号码" 
                                                                     Binding="{Binding BibNumber}" 
-                                                                    Width="80"
+                                                                    Width="100"
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
@@ -563,7 +548,14 @@
                                                 <DataGridTextColumn Header="姓名" 
                                                                     Binding="{Binding Name}" 
                                                                     Width="90"
-                                                                    IsReadOnly="True"/>
+                                                                    IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
 
                                                 <!-- 当前圈数 -->
                                                 <DataGridTextColumn Header="圈数" 
@@ -572,7 +564,8 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
@@ -584,8 +577,9 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontFamily" Value="Consolas"/>
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
@@ -597,8 +591,9 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontFamily" Value="Consolas"/>
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
                                                             <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
@@ -612,10 +607,11 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontFamily" Value="Consolas"/>
                                                             <Setter Property="FontSize" Value="11"/>
                                                             <Setter Property="TextWrapping" Value="Wrap"/>
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
                                                             <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
@@ -628,26 +624,22 @@
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontSize" Value="12"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            <Setter Property="Foreground" Value="#94a3b8"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="进行中">
+                                                                    <Setter Property="Foreground" Value="#22c55e"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="已完成">
+                                                                    <Setter Property="Foreground" Value="#3b82f6"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
-
-                                                <!-- 操作 -->
-                                                <DataGridTemplateColumn Header="操作" Width="80">
-                                                    <DataGridTemplateColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <Button Content="记圈"
-                                                                    Command="{Binding DataContext.RecordLapCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Background="#8b5cf6"
-                                                                    Foreground="White"
-                                                                    Style="{StaticResource SmallActionButton}"
-                                                                    HorizontalAlignment="Center"/>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellTemplate>
-                                                </DataGridTemplateColumn>
                                             </DataGrid.Columns>
 
                                             <!-- 行样式：高亮领先者和已完成者 -->
@@ -663,8 +655,7 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </DataGrid.RowStyle>
-                                        </DataGrid>
-                                    </Grid>
+                                    </DataGrid>
                                 </Border>
                             </Grid>
                         </Border>

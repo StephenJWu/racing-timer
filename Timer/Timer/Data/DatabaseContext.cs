@@ -12,6 +12,8 @@ namespace Timer.Data
     public class DatabaseContext : IDisposable
     {
         private readonly string _connectionString;
+        private readonly string _databasePath;
+        private readonly ILoggingService? _loggingService;
         private SqliteConnection? _connection;
         private bool _disposed = false;
 
@@ -19,16 +21,30 @@ namespace Timer.Data
         /// 初始化数据库上下文
         /// </summary>
         /// <param name="databasePath">数据库文件路径</param>
-        public DatabaseContext(string databasePath)
+        /// <param name="loggingService">日志服务（可选）</param>
+        public DatabaseContext(string databasePath, ILoggingService? loggingService = null)
         {
-            // 确保数据库目录存在
-            var directory = Path.GetDirectoryName(databasePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            _databasePath = databasePath;
+            _loggingService = loggingService;
+            
+            try
             {
-                Directory.CreateDirectory(directory);
-            }
+                // 确保数据库目录存在
+                var directory = Path.GetDirectoryName(databasePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                    _loggingService?.Debug($"[数据库] 创建数据库目录: {directory}");
+                }
 
-            _connectionString = $"Data Source={databasePath}";
+                _connectionString = $"Data Source={databasePath}";
+                _loggingService?.Debug($"[数据库] 初始化数据库上下文: {databasePath}");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"[数据库异常] 初始化数据库上下文失败: {ex.Message}", ex);
+                throw;
+            }
         }
 
         /// <summary>
@@ -36,12 +52,22 @@ namespace Timer.Data
         /// </summary>
         public async Task<SqliteConnection> GetConnectionAsync()
         {
-            if (_connection == null)
+            try
             {
-                _connection = new SqliteConnection(_connectionString);
-                await _connection.OpenAsync();
+                if (_connection == null)
+                {
+                    _loggingService?.Debug($"[数据库] 建立新连接: {_databasePath}");
+                    _connection = new SqliteConnection(_connectionString);
+                    await _connection.OpenAsync();
+                    _loggingService?.Debug("[数据库] 连接已建立");
+                }
+                return _connection;
             }
-            return _connection;
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"[数据库异常] 获取数据库连接失败: {ex.Message}", ex);
+                throw;
+            }
         }
 
         /// <summary>

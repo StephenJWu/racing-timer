@@ -108,13 +108,14 @@ namespace Timer.ViewModels
         [NotifyPropertyChangedFor(nameof(CanStop))]
         [NotifyPropertyChangedFor(nameof(IsRaceActive))]
         [NotifyPropertyChangedFor(nameof(StatusColorHex))]
+        [NotifyPropertyChangedFor(nameof(StatusText))]
         private RaceStatus _status = RaceStatus.Stopped;
 
         /// <summary>
         /// 已用时显示
         /// </summary>
         [ObservableProperty]
-        private string _elapsedTimeDisplay = "00:00:00";
+        private string _elapsedTimeDisplay = "00:00:00.000";
 
         /// <summary>
         /// 是否展开显示参赛者
@@ -242,6 +243,18 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
+        /// 重置计时器（违规重跑时使用）
+        /// </summary>
+        public void ResetTimer()
+        {
+            _timer.Stop();
+            _raceStartTime = DateTime.MinValue;
+            _pausedElapsed = TimeSpan.Zero;
+            Status = RaceStatus.Stopped;
+            ElapsedTimeDisplay = "00:00:00.000";
+        }
+
+        /// <summary>
         /// 获取已用时间
         /// </summary>
         public TimeSpan GetElapsedTime()
@@ -281,7 +294,16 @@ namespace Timer.ViewModels
         private void UpdateElapsedDisplay()
         {
             var elapsed = GetElapsedTime();
-            ElapsedTimeDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+            ElapsedTimeDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}.{elapsed.Milliseconds:D3}";
+            
+            // 同步更新所有未完成参赛者的实时用时
+            foreach (var participant in Participants)
+            {
+                if (!participant.IsCompleted)
+                {
+                    participant.LiveElapsedTime = elapsed;
+                }
+            }
         }
 
         public void Dispose()

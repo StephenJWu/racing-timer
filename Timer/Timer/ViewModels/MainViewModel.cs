@@ -16,6 +16,7 @@ namespace Timer.ViewModels
     {
         private readonly INavigationService _navigationService;
         private readonly DatabaseContext _dbContext;
+        private readonly ILoggingService _loggingService;
         private NavigationItem? _selectedMenuItem;
         private object? _currentView;
         private bool _disposed;
@@ -25,15 +26,22 @@ namespace Timer.ViewModels
         /// </summary>
         /// <param name="navigationService">导航服务实例</param>
         /// <param name="dbContext">数据库上下文实例</param>
+        /// <param name="loggingService">日志服务实例</param>
         /// <exception cref="ArgumentNullException">当navigationService为null时抛出</exception>
-        public MainViewModel(INavigationService navigationService, DatabaseContext dbContext)
+        public MainViewModel(INavigationService navigationService, DatabaseContext dbContext, ILoggingService loggingService)
         {
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
+            
+            _loggingService.Info("MainViewModel 初始化开始");
+            
             MenuItems = new ObservableCollection<NavigationItem>();
             NavigateCommand = new RelayCommand<NavigationItem>(NavigateTo);
             ToggleExpandCommand = new RelayCommand<NavigationItem>(ToggleExpand);
             InitializeMenuItems();
+            
+            _loggingService.Info("MainViewModel 初始化完成");
         }
 
         public ObservableCollection<NavigationItem> MenuItems { get; }
@@ -71,7 +79,7 @@ namespace Timer.ViewModels
                 Title = "成绩管理",
                 Icon = "📊",
                 IconColor = "#22c55e",  // 绿色
-                ViewModel = new ScoreViewModel()
+                ViewModel = CreateScoreViewModel()
             };
             scoreItem.Command = NavigateCommand;
 
@@ -167,6 +175,8 @@ namespace Timer.ViewModels
 
             try
             {
+                _loggingService.Debug($"导航到: {item.Title}");
+                
                 // Clear previous selection
                 if (SelectedMenuItem != null)
                 {
@@ -181,6 +191,7 @@ namespace Timer.ViewModels
                 var view = _navigationService.GetView(item.ViewModel);
                 if (view == null)
                 {
+                    _loggingService.Warn($"导航失败: 无法获取视图 - {item.Title}");
                     // Navigation failed - revert selection
                     item.IsSelected = false;
                     if (SelectedMenuItem != null)
@@ -191,12 +202,11 @@ namespace Timer.ViewModels
                 }
 
                 CurrentView = view;
+                _loggingService.Info($"导航成功: {item.Title}");
             }
             catch (Exception ex)
             {
-                // Log error and revert selection
-                // In production, this should use ILoggingService
-                System.Diagnostics.Debug.WriteLine($"Navigation failed: {ex.Message}");
+                _loggingService.Error($"导航异常: {item.Title}", ex);
                 
                 // Revert selection on error
                 if (SelectedMenuItem != null)
@@ -225,10 +235,11 @@ namespace Timer.ViewModels
         /// </summary>
         private ParticipantViewModel CreateParticipantViewModel()
         {
-            var repository = new ParticipantRepository(_dbContext);
+            _loggingService.Debug("创建 ParticipantViewModel");
+            var repository = new ParticipantRepository(_dbContext, _loggingService);
             var excelImportService = new ExcelImportService(repository);
-            var projectRepository = new ProjectRepository(_dbContext);
-            return new ParticipantViewModel(repository, excelImportService, projectRepository, _dbContext);
+            var projectRepository = new ProjectRepository(_dbContext, _loggingService);
+            return new ParticipantViewModel(repository, excelImportService, projectRepository, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -236,9 +247,10 @@ namespace Timer.ViewModels
         /// </summary>
         private ChipViewModel CreateChipViewModel()
         {
-            var repository = new ChipRepository(_dbContext);
-            var chipImportService = new ChipImportService(repository);
-            return new ChipViewModel(repository, chipImportService, _dbContext);
+            _loggingService.Debug("创建 ChipViewModel");
+            var repository = new ChipRepository(_dbContext, _loggingService);
+            var chipImportService = new ChipImportService(repository, _loggingService);
+            return new ChipViewModel(repository, chipImportService, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -246,11 +258,12 @@ namespace Timer.ViewModels
         /// </summary>
         private GroupViewModel CreateGroupViewModel()
         {
-            var participantRepo = new ParticipantRepository(_dbContext);
-            var chipRepo = new ChipRepository(_dbContext);
-            var raceGroupRepo = new RaceGroupRepository(_dbContext);
+            _loggingService.Debug("创建 GroupViewModel");
+            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var chipRepo = new ChipRepository(_dbContext, _loggingService);
+            var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
             var exportService = new RaceGroupExportService();
-            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService);
+            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService, _loggingService);
         }
 
         /// <summary>
@@ -258,8 +271,19 @@ namespace Timer.ViewModels
         /// </summary>
         private ProjectViewModel CreateProjectViewModel()
         {
-            var repository = new ProjectRepository(_dbContext);
-            return new ProjectViewModel(repository);
+            _loggingService.Debug("创建 ProjectViewModel");
+            var repository = new ProjectRepository(_dbContext, _loggingService);
+            return new ProjectViewModel(repository, _loggingService);
+        }
+
+        /// <summary>
+        /// 创建ScoreViewModel实例（带依赖注入）
+        /// </summary>
+        private ScoreViewModel CreateScoreViewModel()
+        {
+            _loggingService.Debug("创建 ScoreViewModel");
+            var lapRecordRepository = new LapRecordRepository(_dbContext, _loggingService);
+            return new ScoreViewModel(lapRecordRepository, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -267,10 +291,11 @@ namespace Timer.ViewModels
         /// </summary>
         private RaceTimerViewModel CreateRaceTimerViewModel()
         {
-            var raceGroupRepo = new RaceGroupRepository(_dbContext);
-            var participantRepo = new ParticipantRepository(_dbContext);
-            var raceRecordRepo = new RaceRecordRepository(_dbContext);
-            var lapRecordRepo = new LapRecordRepository(_dbContext);
+            _loggingService.Debug("创建 RaceTimerViewModel");
+            var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
+            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var raceRecordRepo = new RaceRecordRepository(_dbContext, _loggingService);
+            var lapRecordRepo = new LapRecordRepository(_dbContext, _loggingService);
             var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
             return new RaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _dbContext);
         }
@@ -280,12 +305,13 @@ namespace Timer.ViewModels
         /// </summary>
         private MultiRaceTimerViewModel CreateMultiRaceTimerViewModel()
         {
-            var raceGroupRepo = new RaceGroupRepository(_dbContext);
-            var participantRepo = new ParticipantRepository(_dbContext);
-            var raceRecordRepo = new RaceRecordRepository(_dbContext);
-            var lapRecordRepo = new LapRecordRepository(_dbContext);
+            _loggingService.Debug("创建 MultiRaceTimerViewModel");
+            var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
+            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var raceRecordRepo = new RaceRecordRepository(_dbContext, _loggingService);
+            var lapRecordRepo = new LapRecordRepository(_dbContext, _loggingService);
             var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
-            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, timerService);
+            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _loggingService);
         }
 
         /// <summary>

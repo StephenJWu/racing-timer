@@ -186,50 +186,16 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 确认导入
+        /// 确认导入（只关闭弹窗，实际导入由主页面执行）
         /// </summary>
-        private async Task ConfirmAsync()
+        private Task ConfirmAsync()
         {
             if (SelectedProject == null || string.IsNullOrEmpty(SelectedFilePath))
-                return;
+                return Task.CompletedTask;
 
-            IsImporting = true;
-            ImportProgress = 0;
-            ImportResult = null;
-
-            try
-            {
-                // 先删除该项目下的所有参赛人员
-                await _participantRepository.DeleteByProjectIdAsync(SelectedProject.Id);
-
-                // 读取Excel文件
-                var participants = await _excelImportService.ReadFromFileAsync(SelectedFilePath);
-
-                // 设置 ProjectId
-                foreach (var participant in participants)
-                {
-                    participant.ProjectId = SelectedProject.Id;
-                }
-
-                // 导入到数据库
-                var progress = new Progress<double>(value => ImportProgress = value);
-                ImportResult = await _excelImportService.ImportAsync(participants, progress);
-
-                DialogResult = true;
-                RequestClose?.Invoke(true);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show(
-                    $"导入失败：{ex.Message}",
-                    "错误",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsImporting = false;
-            }
+            DialogResult = true;
+            RequestClose?.Invoke(true);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -247,6 +213,22 @@ namespace Timer.ViewModels
         public ImportResult? GetImportResult()
         {
             return ImportResult;
+        }
+
+        /// <summary>
+        /// 获取选择的项目
+        /// </summary>
+        public Project? GetSelectedProject()
+        {
+            return SelectedProject;
+        }
+
+        /// <summary>
+        /// 获取选择的文件路径
+        /// </summary>
+        public string? GetSelectedFilePath()
+        {
+            return SelectedFilePath;
         }
     }
 }
