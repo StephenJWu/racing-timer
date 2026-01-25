@@ -35,6 +35,7 @@ namespace Timer.ViewModels
         private string? _selectedGrade;
         private string? _selectedClass;
         private string? _selectedGroup;
+        private bool _isLoading;
 
         // 查询结果
         private RaceGroup? _selectedRaceGroup;
@@ -212,6 +213,15 @@ namespace Timer.ViewModels
         {
             get => _selectedGroup;
             set => SetProperty(ref _selectedGroup, value);
+        }
+
+        /// <summary>
+        /// 是否正在加载
+        /// </summary>
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
         }
 
         // 查询结果
@@ -431,8 +441,14 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task QueryAsync()
         {
+            _loggingService?.Info("[按钮点击] 人员分组 - 查询按钮");
+            _loggingService?.Debug($"[查询条件] School={SelectedSchool}, Grade={SelectedGrade}, Class={SelectedClass}, GroupName={SelectedGroup}, StartDate={StartDate}, EndDate={EndDate}");
             try
             {
+                IsLoading = true;
+                // 让UI有机会刷新显示遮罩层
+                await Task.Delay(50);
+                
                 var school = (SelectedSchool == "全部") ? null : SelectedSchool;
                 var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
                 var classValue = (SelectedClass == "全部") ? null : SelectedClass;
@@ -452,12 +468,16 @@ namespace Timer.ViewModels
                     RaceGroups.Add(raceGroup);
                 }
 
-                _loggingService?.Info($"查询到 {RaceGroups.Count} 个分组");
+                _loggingService?.Info($"[查询结果] 查询到 {RaceGroups.Count} 个分组");
             }
             catch (Exception ex)
             {
                 _loggingService?.Error($"查询分组失败: {ex.Message}", ex);
                 MessageBox.Show($"查询失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
 
@@ -696,8 +716,11 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task ExportAsync()
         {
+            _loggingService?.Info("[按钮点击] 人员分组 - 导出按钮");
+            
             if (RaceGroups.Count == 0)
             {
+                _loggingService?.Warn("[导出] 没有可导出的数据");
                 MessageBox.Show("没有可导出的数据，请先查询分组", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -712,27 +735,43 @@ namespace Timer.ViewModels
 
                 if (saveFileDialog.ShowDialog() == true)
                 {
-                    // 加载所有分组的参赛人员
-                    var participantsDict = new Dictionary<int, IEnumerable<Participant>>();
-                    foreach (var raceGroup in RaceGroups)
+                    _loggingService?.Info($"[导出] 开始导出分组到: {saveFileDialog.FileName}");
+                    IsLoading = true;
+                    
+                    try
                     {
-                        var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
-                            raceGroup.School,
-                            raceGroup.Grade,
-                            raceGroup.Class,
-                            raceGroup.GroupName);
-                        participantsDict[raceGroup.Id] = participants;
+                        // 加载所有分组的参赛人员
+                        var participantsDict = new Dictionary<int, IEnumerable<Participant>>();
+                        foreach (var raceGroup in RaceGroups)
+                        {
+                            var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
+                                raceGroup.School,
+                                raceGroup.Grade,
+                                raceGroup.Class,
+                                raceGroup.GroupName);
+                            participantsDict[raceGroup.Id] = participants;
+                        }
+
+                        await _exportService.ExportToExcelAsync(RaceGroups, participantsDict, saveFileDialog.FileName);
+
+                        _loggingService?.Info($"[导出] 成功导出 {RaceGroups.Count} 个分组到 {saveFileDialog.FileName}");
+                        MessageBox.Show($"导出成功！\n文件位置：{saveFileDialog.FileName}", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
-
-                    await _exportService.ExportToExcelAsync(RaceGroups, participantsDict, saveFileDialog.FileName);
-
-                    MessageBox.Show($"导出成功！\n文件位置：{saveFileDialog.FileName}", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Error($"[导出异常] 导出Excel失败: {ex.Message}", ex);
+                        MessageBox.Show($"导出失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _loggingService?.Error($"导出失败: {ex.Message}", ex);
-                MessageBox.Show($"导出失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                _loggingService?.Error($"[导出异常] 打开保存对话框失败: {ex.Message}", ex);
+                MessageBox.Show($"发生错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

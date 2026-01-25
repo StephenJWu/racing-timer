@@ -421,6 +421,7 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task ImportExcelAsync()
         {
+            _loggingService?.Info("[按钮点击] 参赛人员 - 导入参赛人员按钮");
             try
             {
                 var dialogViewModel = new ImportParticipantDialogViewModel(_projectRepository, _repository, _excelImportService);
@@ -432,45 +433,91 @@ namespace Timer.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    ImportResult = dialogViewModel.GetImportResult();
+                    var selectedProject = dialogViewModel.GetSelectedProject();
+                    var selectedFilePath = dialogViewModel.GetSelectedFilePath();
 
-                    if (ImportResult != null)
+                    if (selectedProject == null || string.IsNullOrEmpty(selectedFilePath))
+                        return;
+
+                    _loggingService?.Info($"[导入] 开始导入参赛人员, 项目: {selectedProject.Name}, 文件: {selectedFilePath}");
+
+                    // 显示遮罩层
+                    IsLoading = true;
+                    ImportProgress = 0;
+                    ImportResult = null;
+
+                    // 让UI有机会刷新显示遮罩层
+                    await Task.Delay(50);
+
+                    string? resultMessage = null;
+                    string? resultTitle = null;
+                    MessageBoxImage resultIcon = MessageBoxImage.Information;
+
+                    try
                     {
+                        // 先删除该项目下的所有参赛人员
+                        await _repository.DeleteByProjectIdAsync(selectedProject.Id);
+                        _loggingService?.Info($"已清空项目 {selectedProject.Name} 的参赛人员数据，准备重新导入");
+
+                        // 读取Excel文件
+                        var participants = await _excelImportService.ReadFromFileAsync(selectedFilePath);
+
+                        // 设置 ProjectId
+                        foreach (var participant in participants)
+                        {
+                            participant.ProjectId = selectedProject.Id;
+                        }
+
+                        // 导入到数据库
+                        var progress = new Progress<double>(value => ImportProgress = value);
+                        ImportResult = await _excelImportService.ImportAsync(participants, progress);
+
                         if (ImportResult.IsSuccess())
                         {
-                            MessageBox.Show(
-                                $"成功导入{ImportResult.SuccessCount}条记录",
-                                "导入成功",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Information);
+                            resultMessage = $"成功导入{ImportResult.SuccessCount}条记录";
+                            resultTitle = "导入成功";
+                            resultIcon = MessageBoxImage.Information;
                         }
                         else
                         {
-                            var errorMessage = $"导入完成：成功{ImportResult.SuccessCount}条，失败{ImportResult.FailureCount}条\n\n";
-                            errorMessage += string.Join("\n", ImportResult.Errors.Take(10).Select(e => e.ToString()));
+                            resultMessage = $"导入完成：成功{ImportResult.SuccessCount}条，失败{ImportResult.FailureCount}条\n\n";
+                            resultMessage += string.Join("\n", ImportResult.Errors.Take(10).Select(e => e.ToString()));
                             if (ImportResult.Errors.Count > 10)
                             {
-                                errorMessage += $"\n... 还有{ImportResult.Errors.Count - 10}个错误";
+                                resultMessage += $"\n... 还有{ImportResult.Errors.Count - 10}个错误";
                             }
-
-                            MessageBox.Show(
-                                errorMessage,
-                                "导入完成（有错误）",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
+                            resultTitle = "导入完成（有错误）";
+                            resultIcon = MessageBoxImage.Warning;
                         }
 
-                        // 刷新列表
-                        await LoadParticipantsAsync();
+                        // 刷新列表（使用内部方法，不重置IsLoading）
+                        await LoadParticipantsInternalAsync();
                         // 刷新筛选项数据源（学校/年级/班级/组别）
                         await RefreshFilterSourcesAsync();
 
                         // 通知其它页面：人员/分组统计可能变化
                         WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.Participants));
                         WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Error($"导入Excel文件失败: {ex.Message}", ex);
+                        resultMessage = $"导入Excel文件失败: {ex.Message}";
+                        resultTitle = "错误";
+                        resultIcon = MessageBoxImage.Error;
+                    }
+                    finally
+                    {
+                        // 关闭遮罩层
+                        IsLoading = false;
+                        // 让UI有机会刷新关闭遮罩层
+                        await Task.Delay(50);
+                    }
 
-                        // 3秒后自动隐藏导入结果
-                        _ = HideImportResultAfterDelayAsync();
+                    // 在遮罩层关闭后显示结果
+                    if (resultMessage != null && resultTitle != null)
+                    {
+                        MessageBox.Show(resultMessage, resultTitle, MessageBoxButton.OK, resultIcon);
                     }
                 }
             }
@@ -499,6 +546,8 @@ namespace Timer.ViewModels
         /// </summary>
         private void Search()
         {
+            _loggingService?.Info("[按钮点击] 参赛人员 - 查询按钮");
+            _loggingService?.Debug($"[查询条件] School={SearchFilter.School}, Grade={SearchFilter.Grade}, Class={SearchFilter.Class}, GroupName={SearchFilter.GroupName}, StartDate={StartDate}, EndDate={EndDate}");
             CurrentPage = 1;
             _ = LoadParticipantsAsync();
         }
@@ -508,6 +557,7 @@ namespace Timer.ViewModels
         /// </summary>
         private void ClearSearch()
         {
+            _loggingService?.Info("[按钮点击] 参赛人员 - 清除搜索按钮");
             SearchFilter = new SearchFilter();
             StartDate = null;
             EndDate = null;
@@ -562,13 +612,9 @@ namespace Timer.ViewModels
             try
             {
                 IsLoading = true;
-
-                SearchFilter.PageNumber = CurrentPage;
-                var participants = await _repository.GetAllAsync(SearchFilter);
-                var totalCount = await _repository.GetTotalCountAsync(SearchFilter);
-
-                Participants = new ObservableCollection<Participant>(participants);
-                TotalCount = totalCount;
+                // 让UI有机会刷新显示遮罩层
+                await Task.Delay(50);
+                await LoadParticipantsInternalAsync();
             }
             catch (Exception ex)
             {
@@ -584,6 +630,20 @@ namespace Timer.ViewModels
                 IsLoading = false;
                 UpdateTotalPages();
             }
+        }
+
+        /// <summary>
+        /// 异步加载人员列表（内部方法，不设置IsLoading）
+        /// </summary>
+        private async Task LoadParticipantsInternalAsync()
+        {
+            SearchFilter.PageNumber = CurrentPage;
+            var participants = await _repository.GetAllAsync(SearchFilter);
+            var totalCount = await _repository.GetTotalCountAsync(SearchFilter);
+
+            Participants = new ObservableCollection<Participant>(participants);
+            TotalCount = totalCount;
+            UpdateTotalPages();
         }
 
         /// <summary>

@@ -25,14 +25,16 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
     </UserControl.Resources>
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <!-- 主内容区域 -->
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- 顶部查询区 -->
+            <!-- 顶部查询区 -->
         <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="20" Margin="0,0,0,16">
             <StackPanel>
                 <TextBlock Text="查询条件" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextColorBrush}" Margin="0,0,0,16"/>
@@ -280,33 +282,61 @@
             </StackPanel>
         </Border>
 
-        <!-- 分页控件 -->
-        <Grid Grid.Row="2" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="上一页" 
-                        Command="{Binding PreviousPageCommand}"
-                        Padding="12,6"
-                        Margin="0,0,8,0"
-                        FontSize="12"/>
-                <TextBlock Text="{Binding CurrentPage, StringFormat='第 {0} 页'}"
-                           VerticalAlignment="Center"
-                           FontSize="12"
-                           Foreground="{StaticResource TextColorBrush}"
-                           Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding TotalPages, StringFormat='共 {0} 页'}"
-                           VerticalAlignment="Center"
-                           FontSize="12"
-                           Foreground="{StaticResource SecondaryTextColorBrush}"
-                           Margin="0,0,8,0"/>
-                <Button Content="下一页" 
-                        Command="{Binding NextPageCommand}"
-                        Padding="12,6"
-                        FontSize="12"/>
-            </StackPanel>
+            <!-- 分页控件 -->
+            <Grid Grid.Row="2" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="上一页" 
+                            Command="{Binding PreviousPageCommand}"
+                            Padding="12,6"
+                            Margin="0,0,8,0"
+                            FontSize="12"/>
+                    <TextBlock Text="{Binding CurrentPage, StringFormat='第 {0} 页'}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource TextColorBrush}"
+                               Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TotalPages, StringFormat='共 {0} 页'}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,8,0"/>
+                    <Button Content="下一页" 
+                            Command="{Binding NextPageCommand}"
+                            Padding="12,6"
+                            FontSize="12"/>
+                </StackPanel>
+            </Grid>
         </Grid>
+
+        <!-- 加载遮罩层 -->
+        <Border Background="#80000000" 
+                Panel.ZIndex="1000"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="White" 
+                    CornerRadius="8" 
+                    Padding="32,24"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="#40000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="处理中..." 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextColorBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="请稍候" 
+                               FontSize="12" 
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

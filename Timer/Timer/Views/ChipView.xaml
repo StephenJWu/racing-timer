@@ -9,13 +9,15 @@
         <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter"/>
     </UserControl.Resources>
     
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" MinHeight="200"/>
-            <RowDefinition Height="*" MinHeight="200"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <!-- 主内容区域 -->
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="200"/>
+                <RowDefinition Height="*" MinHeight="200"/>
+            </Grid.RowDefinitions>
 
-        <!-- 上半部分：芯片组列表区域 -->
+            <!-- 上半部分：芯片组列表区域 -->
         <Border Grid.Row="0" 
                 Style="{StaticResource CardStyle}"
                 Margin="0,0,0,16">
@@ -300,18 +302,33 @@
                            Visibility="{Binding SelectedChipGroup, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
             </Grid>
         </Border>
-        
-        <!-- 加载遮罩 -->
-        <Border Grid.RowSpan="2"
-                Background="#80ffffff"
+        </Grid>
+
+        <!-- 加载遮罩层 -->
+        <Border Background="#80000000" 
+                Panel.ZIndex="1000"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="⏳" FontSize="32" HorizontalAlignment="Center"/>
-                <TextBlock Text="加载中..." 
-                           FontSize="14" 
-                           Foreground="{StaticResource SecondaryTextColorBrush}"
-                           Margin="0,8,0,0"/>
-            </StackPanel>
+            <Border Background="White" 
+                    CornerRadius="8" 
+                    Padding="32,24"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="#40000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="处理中..." 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextColorBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="请稍候" 
+                               FontSize="12" 
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </UserControl>

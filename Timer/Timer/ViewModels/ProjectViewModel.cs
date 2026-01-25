@@ -27,6 +27,7 @@ namespace Timer.ViewModels
         // 数据
         private Project? _selectedProjectItem;
         private int _totalCount;
+        private bool _isLoading;
 
         private const string AllOption = "全部";
 
@@ -93,6 +94,15 @@ namespace Timer.ViewModels
             set => SetProperty(ref _totalCount, value);
         }
 
+        /// <summary>
+        /// 是否正在加载
+        /// </summary>
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+
         // 命令
         public IAsyncRelayCommand SearchCommand { get; }
         public IAsyncRelayCommand AddCommand { get; }
@@ -144,8 +154,14 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task SearchAsync()
         {
+            _loggingService?.Info("[按钮点击] 项目管理 - 查询按钮");
+            _loggingService?.Debug($"[查询条件] ProjectName={SelectedProject}, StartDate={StartDate}, EndDate={EndDate}");
             try
             {
+                IsLoading = true;
+                // 让UI有机会刷新显示遮罩层
+                await Task.Delay(50);
+                
                 var projectName = (SelectedProject == AllOption) ? null : SelectedProject;
                 var projects = await _projectRepository.QueryAsync(StartDate, EndDate, projectName);
 
@@ -156,12 +172,16 @@ namespace Timer.ViewModels
                 }
 
                 TotalCount = Projects.Count;
-                _loggingService?.Info($"查询到 {TotalCount} 个项目");
+                _loggingService?.Info($"[查询结果] 查询到 {TotalCount} 个项目");
             }
             catch (Exception ex)
             {
                 _loggingService?.Error($"查询项目失败: {ex.Message}", ex);
                 MessageBox.Show($"查询失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
             }
         }
 

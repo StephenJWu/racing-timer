@@ -28,6 +28,24 @@ namespace Timer.Services
         }
 
         /// <summary>
+        /// 记录SQL执行日志
+        /// </summary>
+        private void LogSql(string operation, string sql, object? parameters = null)
+        {
+            var paramStr = parameters != null ? $", Params: {parameters}" : "";
+            _loggingService?.Debug($"[SQL] {operation}: {sql.Trim().Replace("\n", " ").Replace("  ", " ")}{paramStr}");
+        }
+
+        /// <summary>
+        /// 记录数据库异常
+        /// </summary>
+        private void LogDbError(string operation, Exception ex, string? sql = null)
+        {
+            var sqlInfo = sql != null ? $"\nSQL: {sql.Trim().Replace("\n", " ")}" : "";
+            _loggingService?.Error($"[数据库异常] {operation} 失败: {ex.Message}{sqlInfo}", ex);
+        }
+
+        /// <summary>
         /// 根据条件查询比赛分组
         /// </summary>
         public async Task<IEnumerable<RaceGroup>> QueryRaceGroupsAsync(

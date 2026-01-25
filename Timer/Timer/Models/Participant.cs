@@ -96,6 +96,29 @@ namespace Timer.Models
         /// 组内序号（非持久化属性，用于UI显示）
         /// </summary>
         public int GroupSequenceNumber { get; set; }
+
+        /// <summary>
+        /// 完成的圈数（非持久化属性，用于成绩显示）
+        /// </summary>
+        public int TotalLaps { get; set; }
+
+        /// <summary>
+        /// 累计用时（毫秒）（非持久化属性，用于成绩显示）
+        /// </summary>
+        public long TotalTimeMs { get; set; }
+
+        /// <summary>
+        /// 累计用时格式化显示（精确到毫秒）
+        /// </summary>
+        public string TotalTimeFormatted
+        {
+            get
+            {
+                if (TotalTimeMs <= 0) return "-";
+                var ts = TimeSpan.FromMilliseconds(TotalTimeMs);
+                return $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
+            }
+        }
     }
 }
 

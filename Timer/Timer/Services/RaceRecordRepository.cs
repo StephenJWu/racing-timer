@@ -13,10 +13,30 @@ namespace Timer.Services
     public class RaceRecordRepository : IRaceRecordRepository
     {
         private readonly DatabaseContext _dbContext;
+        private readonly ILoggingService? _loggingService;
 
-        public RaceRecordRepository(DatabaseContext dbContext)
+        public RaceRecordRepository(DatabaseContext dbContext, ILoggingService? loggingService = null)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _loggingService = loggingService;
+        }
+
+        /// <summary>
+        /// 记录SQL执行日志
+        /// </summary>
+        private void LogSql(string operation, string sql, object? parameters = null)
+        {
+            var paramStr = parameters != null ? $", Params: {parameters}" : "";
+            _loggingService?.Debug($"[SQL] {operation}: {sql.Trim().Replace("\n", " ").Replace("  ", " ")}{paramStr}");
+        }
+
+        /// <summary>
+        /// 记录数据库异常
+        /// </summary>
+        private void LogDbError(string operation, Exception ex, string? sql = null)
+        {
+            var sqlInfo = sql != null ? $"\nSQL: {sql.Trim().Replace("\n", " ")}" : "";
+            _loggingService?.Error($"[数据库异常] {operation} 失败: {ex.Message}{sqlInfo}", ex);
         }
 
         public async Task<RaceRecord?> GetByIdAsync(int id)
