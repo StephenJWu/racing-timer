@@ -262,8 +262,9 @@ namespace Timer.ViewModels
             var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
             var chipRepo = new ChipRepository(_dbContext, _loggingService);
             var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
+            var projectRepo = new ProjectRepository(_dbContext, _loggingService);
             var exportService = new RaceGroupExportService();
-            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, exportService, _loggingService);
+            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, projectRepo, exportService, _loggingService);
         }
 
         /// <summary>
@@ -283,7 +284,8 @@ namespace Timer.ViewModels
         {
             _loggingService.Debug("创建 ScoreViewModel");
             var lapRecordRepository = new LapRecordRepository(_dbContext, _loggingService);
-            return new ScoreViewModel(lapRecordRepository, _dbContext, _loggingService);
+            var projectRepository = new ProjectRepository(_dbContext, _loggingService);
+            return new ScoreViewModel(lapRecordRepository, projectRepository, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -308,10 +310,11 @@ namespace Timer.ViewModels
             _loggingService.Debug("创建 MultiRaceTimerViewModel");
             var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
             var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var projectRepo = new ProjectRepository(_dbContext, _loggingService);
             var raceRecordRepo = new RaceRecordRepository(_dbContext, _loggingService);
             var lapRecordRepo = new LapRecordRepository(_dbContext, _loggingService);
             var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
-            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _loggingService);
+            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, projectRepo, timerService, _loggingService);
         }
 
         /// <summary>

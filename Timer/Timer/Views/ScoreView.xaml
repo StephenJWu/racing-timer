@@ -13,12 +13,6 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
         </Style>
-        
-        <!-- DatePicker 样式：内容居中 -->
-        <Style x:Key="CenteredDatePickerStyle" TargetType="DatePicker">
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
     </UserControl.Resources>
     <Grid>
         <!-- 主内容区域 -->
@@ -49,63 +43,30 @@
                     </Grid.RowDefinitions>
 
                     <!-- 第一行 -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="开始日期：" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <DatePicker Grid.Row="0" Grid.Column="1" SelectedDate="{Binding StartDate}" 
-                                Style="{StaticResource CenteredDatePickerStyle}" Margin="0,0,16,0"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="项目：" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Projects}" 
+                              SelectedItem="{Binding SelectedProject}" DisplayMemberPath="Name"
+                              Style="{StaticResource CenteredComboBoxStyle}" Margin="0,0,16,0"/>
 
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="结束日期：" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <DatePicker Grid.Row="0" Grid.Column="3" SelectedDate="{Binding EndDate}" 
-                                Style="{StaticResource CenteredDatePickerStyle}" Margin="0,0,16,0"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="学校：" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <ComboBox Grid.Row="0" Grid.Column="3" ItemsSource="{Binding Schools}" 
+                              SelectedItem="{Binding SelectedSchool}" 
+                              Style="{StaticResource CenteredComboBoxStyle}" Margin="0,0,16,0"/>
 
-                    <TextBlock Grid.Row="0" Grid.Column="4" Text="学校：" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <ComboBox Grid.Row="0" Grid.Column="5" ItemsSource="{Binding Schools}" 
-                              SelectedItem="{Binding SelectedSchool}" Style="{StaticResource CenteredComboBoxStyle}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="4" Text="年级：" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <ComboBox Grid.Row="0" Grid.Column="5" ItemsSource="{Binding Grades}" 
+                              SelectedItem="{Binding SelectedGrade}" Style="{StaticResource CenteredComboBoxStyle}"/>
 
                     <!-- 第二行 -->
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="年级：" VerticalAlignment="Center" Margin="0,12,12,0"/>
-                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Grades}" 
-                              SelectedItem="{Binding SelectedGrade}" Margin="0,12,16,0">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox" BasedOn="{StaticResource CenteredComboBoxStyle}">
-                                <Setter Property="IsEnabled" Value="True"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Grades.Count}" Value="0">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="班级：" VerticalAlignment="Center" Margin="0,12,12,0"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Classes}" 
+                              SelectedItem="{Binding SelectedClass}" Margin="0,12,16,0"
+                              Style="{StaticResource CenteredComboBoxStyle}"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="班级：" VerticalAlignment="Center" Margin="0,12,12,0"/>
-                    <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding Classes}" 
-                              SelectedItem="{Binding SelectedClass}" Margin="0,12,16,0">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox" BasedOn="{StaticResource CenteredComboBoxStyle}">
-                                <Setter Property="IsEnabled" Value="True"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Classes.Count}" Value="0">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
-
-                    <TextBlock Grid.Row="1" Grid.Column="4" Text="组别：" VerticalAlignment="Center" Margin="0,12,12,0"/>
-                    <ComboBox Grid.Row="1" Grid.Column="5" ItemsSource="{Binding GroupNames}" 
-                              SelectedItem="{Binding SelectedGroup}" Margin="0,12,0,0">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox" BasedOn="{StaticResource CenteredComboBoxStyle}">
-                                <Setter Property="IsEnabled" Value="True"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding GroupNames.Count}" Value="0">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="组别：" VerticalAlignment="Center" Margin="0,12,12,0"/>
+                    <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding GroupNames}" 
+                              SelectedItem="{Binding SelectedGroup}" Margin="0,12,16,0"
+                              Style="{StaticResource CenteredComboBoxStyle}"/>
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

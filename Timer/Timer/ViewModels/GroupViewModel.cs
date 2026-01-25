@@ -21,16 +21,19 @@ namespace Timer.ViewModels
     /// </summary>
     public class GroupViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
+        private const string AllOption = AllOption;
+        
         private readonly IParticipantRepository _participantRepository;
         private readonly IChipRepository _chipRepository;
         private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IProjectRepository _projectRepository;
         private readonly IRaceGroupExportService _exportService;
         private readonly ILoggingService? _loggingService;
         private bool _disposed;
 
         // 查询条件
-        private DateTime? _startDate;
-        private DateTime? _endDate;
+        private ObservableCollection<Project> _projects = new();
+        private Project? _selectedProject;
         private string? _selectedSchool;
         private string? _selectedGrade;
         private string? _selectedClass;
@@ -47,22 +50,24 @@ namespace Timer.ViewModels
             IParticipantRepository participantRepository,
             IChipRepository chipRepository,
             IRaceGroupRepository raceGroupRepository,
+            IProjectRepository projectRepository,
             IRaceGroupExportService exportService,
             ILoggingService? loggingService = null)
         {
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
             _chipRepository = chipRepository ?? throw new ArgumentNullException(nameof(chipRepository));
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
             _loggingService = loggingService;
 
             Title = "人员分组";
 
             // 初始化集合
-            Schools = new ObservableCollection<string>();
-            Grades = new ObservableCollection<string>();
-            Classes = new ObservableCollection<string>();
-            Groups = new ObservableCollection<string>();
+            Schools = new ObservableCollection<string> { AllOption };
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            Groups = new ObservableCollection<string> { AllOption };
             RaceGroups = new ObservableCollection<RaceGroup>();
             Participants = new ObservableCollection<Participant>();
             ChipGroups = new ObservableCollection<ChipGroup>();
@@ -133,7 +138,7 @@ namespace Timer.ViewModels
                     break;
                 case DataDomain.RaceGroups:
                     // 仅在已选择学校时自动重查，避免弹“请选择学校”
-                    if (!string.IsNullOrWhiteSpace(SelectedSchool) && SelectedSchool != "全部")
+                    if (!string.IsNullOrWhiteSpace(SelectedSchool) && SelectedSchool != AllOption)
                     {
                         _ = QueryAsync();
                     }
@@ -152,17 +157,47 @@ namespace Timer.ViewModels
         /// </summary>
         public string Title { get; }
 
-        // 查询条件属性
-        public DateTime? StartDate
+        // 项目列表属性
+        public ObservableCollection<Project> Projects
         {
-            get => _startDate;
-            set => SetProperty(ref _startDate, value);
+            get => _projects;
+            set => SetProperty(ref _projects, value);
         }
 
-        public DateTime? EndDate
+        public Project? SelectedProject
         {
-            get => _endDate;
-            set => SetProperty(ref _endDate, value);
+            get => _selectedProject;
+            set
+            {
+                if (SetProperty(ref _selectedProject, value))
+                {
+                    // 重置下级下拉框
+                    _selectedSchool = AllOption;
+                    _selectedGrade = AllOption;
+                    _selectedClass = AllOption;
+                    _selectedGroup = AllOption;
+                    
+                    Schools.Clear();
+                    Schools.Add(AllOption);
+                    Grades.Clear();
+                    Grades.Add(AllOption);
+                    Classes.Clear();
+                    Classes.Add(AllOption);
+                    Groups.Clear();
+                    Groups.Add(AllOption);
+                    
+                    OnPropertyChanged(nameof(SelectedSchool));
+                    OnPropertyChanged(nameof(SelectedGrade));
+                    OnPropertyChanged(nameof(SelectedClass));
+                    OnPropertyChanged(nameof(SelectedGroup));
+                    
+                    // 加载该项目下的学校列表
+                    if (value != null && value.Id > 0)
+                    {
+                        _ = LoadSchoolsByProjectAsync(value.Id);
+                    }
+                }
+            }
         }
 
         public ObservableCollection<string> Schools { get; }
@@ -272,17 +307,8 @@ namespace Timer.ViewModels
         {
             try
             {
-                // 加载学校列表
-                var schools = await _participantRepository.GetDistinctSchoolsAsync();
-                Schools.Clear();
-                Schools.Add("全部");
-                foreach (var school in schools)
-                {
-                    Schools.Add(school);
-                }
-                // 默认选择"全部"
-                _selectedSchool = "全部";
-                OnPropertyChanged(nameof(SelectedSchool));
+                // 加载项目列表
+                await LoadProjectsAsync();
 
                 // 加载芯片组列表
                 var chipGroups = await _chipRepository.GetAllChipGroupsAsync();
@@ -303,6 +329,59 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
+        /// 加载项目列表
+        /// </summary>
+        private async Task LoadProjectsAsync()
+        {
+            try
+            {
+                var projects = await _projectRepository.GetActiveProjectsAsync();
+                var projectList = new ObservableCollection<Project>();
+                
+                // 添加"全部"选项作为第一项（Id=0 表示全部）
+                projectList.Add(new Project { Id = 0, Name = AllOption });
+                
+                foreach (var project in projects)
+                {
+                    projectList.Add(project);
+                }
+                
+                Projects = projectList;
+                
+                // 默认选择"全部"
+                _selectedProject = projectList.FirstOrDefault(p => p.Id == 0);
+                OnPropertyChanged(nameof(SelectedProject));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载项目列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 根据项目ID加载学校列表
+        /// </summary>
+        private async Task LoadSchoolsByProjectAsync(int projectId)
+        {
+            try
+            {
+                var schools = await _participantRepository.GetDistinctSchoolsByProjectAsync(projectId);
+                Schools.Clear();
+                Schools.Add(AllOption);
+                foreach (var school in schools)
+                {
+                    Schools.Add(school);
+                }
+                _selectedSchool = AllOption;
+                OnPropertyChanged(nameof(SelectedSchool));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载学校列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// 加载年级列表
         /// </summary>
         private async Task LoadGradesAsync(string? school)
@@ -311,13 +390,13 @@ namespace Timer.ViewModels
             {
                 var grades = await _participantRepository.GetDistinctGradesAsync(school);
                 Grades.Clear();
-                Grades.Add("全部");
+                Grades.Add(AllOption);
                 foreach (var grade in grades)
                 {
                     Grades.Add(grade);
                 }
                 // 默认选择"全部"
-                _selectedGrade = "全部";
+                _selectedGrade = AllOption;
                 OnPropertyChanged(nameof(SelectedGrade));
 
                 // 加载班级（因为年级默认是"全部"）
@@ -338,13 +417,13 @@ namespace Timer.ViewModels
             {
                 var classes = await _participantRepository.GetDistinctClassesAsync(school, grade);
                 Classes.Clear();
-                Classes.Add("全部");
+                Classes.Add(AllOption);
                 foreach (var cls in classes)
                 {
                     Classes.Add(cls);
                 }
                 // 默认选择"全部"
-                _selectedClass = "全部";
+                _selectedClass = AllOption;
                 OnPropertyChanged(nameof(SelectedClass));
 
                 // 加载组别（因为班级默认是"全部"）
@@ -365,13 +444,13 @@ namespace Timer.ViewModels
             {
                 var groups = await _participantRepository.GetDistinctGroupNamesAsync(school, grade, classValue);
                 Groups.Clear();
-                Groups.Add("全部");
+                Groups.Add(AllOption);
                 foreach (var group in groups)
                 {
                     Groups.Add(group);
                 }
                 // 默认选择"全部"
-                _selectedGroup = "全部";
+                _selectedGroup = AllOption;
                 OnPropertyChanged(nameof(SelectedGroup));
             }
             catch (Exception ex)
@@ -406,7 +485,7 @@ namespace Timer.ViewModels
             Classes.Clear();
             Groups.Clear();
 
-            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
+            var school = (SelectedSchool == AllOption) ? null : SelectedSchool;
             await LoadGradesAsync(school);
         }
 
@@ -418,8 +497,8 @@ namespace Timer.ViewModels
             Classes.Clear();
             Groups.Clear();
 
-            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
-            var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
+            var school = (SelectedSchool == AllOption) ? null : SelectedSchool;
+            var grade = (SelectedGrade == AllOption) ? null : SelectedGrade;
             await LoadClassesAsync(school, grade);
         }
 
@@ -430,9 +509,9 @@ namespace Timer.ViewModels
         {
             Groups.Clear();
 
-            var school = (SelectedSchool == "全部") ? null : SelectedSchool;
-            var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
-            var classValue = (SelectedClass == "全部") ? null : SelectedClass;
+            var school = (SelectedSchool == AllOption) ? null : SelectedSchool;
+            var grade = (SelectedGrade == AllOption) ? null : SelectedGrade;
+            var classValue = (SelectedClass == AllOption) ? null : SelectedClass;
             await LoadGroupsAsync(school, grade, classValue);
         }
 
@@ -442,21 +521,21 @@ namespace Timer.ViewModels
         private async Task QueryAsync()
         {
             _loggingService?.Info("[按钮点击] 人员分组 - 查询按钮");
-            _loggingService?.Debug($"[查询条件] School={SelectedSchool}, Grade={SelectedGrade}, Class={SelectedClass}, GroupName={SelectedGroup}, StartDate={StartDate}, EndDate={EndDate}");
+            var projectId = (SelectedProject == null || SelectedProject.Id == 0) ? (int?)null : SelectedProject.Id;
+            _loggingService?.Debug($"[查询条件] ProjectId={projectId}, School={SelectedSchool}, Grade={SelectedGrade}, Class={SelectedClass}, GroupName={SelectedGroup}");
             try
             {
                 IsLoading = true;
                 // 让UI有机会刷新显示遮罩层
                 await Task.Delay(50);
                 
-                var school = (SelectedSchool == "全部") ? null : SelectedSchool;
-                var grade = (SelectedGrade == "全部") ? null : SelectedGrade;
-                var classValue = (SelectedClass == "全部") ? null : SelectedClass;
-                var groupName = (SelectedGroup == "全部") ? null : SelectedGroup;
+                var school = (SelectedSchool == AllOption) ? null : SelectedSchool;
+                var grade = (SelectedGrade == AllOption) ? null : SelectedGrade;
+                var classValue = (SelectedClass == AllOption) ? null : SelectedClass;
+                var groupName = (SelectedGroup == AllOption) ? null : SelectedGroup;
 
                 var raceGroups = await _raceGroupRepository.QueryRaceGroupsAsync(
-                    StartDate,
-                    EndDate,
+                    projectId,
                     school,
                     grade,
                     classValue,

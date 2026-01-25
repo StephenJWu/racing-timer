@@ -49,8 +49,7 @@ namespace Timer.Services
         /// 根据条件查询比赛分组
         /// </summary>
         public async Task<IEnumerable<RaceGroup>> QueryRaceGroupsAsync(
-            DateTime? startDate,
-            DateTime? endDate,
+            int? projectId,
             string? school,
             string? grade = null,
             string? classValue = null,
@@ -66,16 +65,10 @@ namespace Timer.Services
                 "GroupName != ''"
             };
 
-            if (startDate.HasValue)
+            if (projectId.HasValue && projectId.Value > 0)
             {
-                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
-                participantCommand.Parameters.Add(new SqliteParameter("@startDate", startDate.Value.ToString("yyyy-MM-dd")));
-            }
-
-            if (endDate.HasValue)
-            {
-                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
-                participantCommand.Parameters.Add(new SqliteParameter("@endDate", endDate.Value.ToString("yyyy-MM-dd")));
+                whereClauses.Add("ProjectId = @projectId");
+                participantCommand.Parameters.Add(new SqliteParameter("@projectId", projectId.Value));
             }
 
             if (!string.IsNullOrWhiteSpace(school))
@@ -117,6 +110,8 @@ namespace Timer.Services
                 ORDER BY Grade, Class, GroupName
             ";
 
+            _loggingService?.Debug($"[SQL] QueryRaceGroupsAsync: {participantCommand.CommandText}");
+
             var groupInfos = new List<(string School, string? Grade, string? Class, string GroupName, int Count)>();
 
             using (var reader = await participantCommand.ExecuteReaderAsync())
@@ -156,6 +151,7 @@ namespace Timer.Services
             command.CommandText = @"
                 SELECT 
                     rg.Id,
+                    rg.ProjectId,
                     rg.School,
                     rg.Grade,
                     rg.Class,
@@ -165,9 +161,11 @@ namespace Timer.Services
                     rg.CreatedAt,
                     rg.UpdatedAt,
                     cg.GroupName as ChipGroupName,
-                    cg.Color as ChipGroupColor
+                    cg.Color as ChipGroupColor,
+                    p.Name as ProjectName
                 FROM RaceGroups rg
                 LEFT JOIN ChipGroups cg ON rg.ChipGroupId = cg.Id
+                LEFT JOIN Projects p ON rg.ProjectId = p.Id
                 ORDER BY rg.School, rg.Grade, rg.Class, rg.GroupName
             ";
 
@@ -213,6 +211,7 @@ namespace Timer.Services
             command.CommandText = @"
                 SELECT 
                     rg.Id,
+                    rg.ProjectId,
                     rg.School,
                     rg.Grade,
                     rg.Class,
@@ -222,9 +221,11 @@ namespace Timer.Services
                     rg.CreatedAt,
                     rg.UpdatedAt,
                     cg.GroupName as ChipGroupName,
-                    cg.Color as ChipGroupColor
+                    cg.Color as ChipGroupColor,
+                    p.Name as ProjectName
                 FROM RaceGroups rg
                 LEFT JOIN ChipGroups cg ON rg.ChipGroupId = cg.Id
+                LEFT JOIN Projects p ON rg.ProjectId = p.Id
                 WHERE rg.Id = @id
             ";
 
@@ -237,6 +238,175 @@ namespace Timer.Services
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 根据项目ID获取比赛分组（从参赛人员数据中获取学校-年级-班级-组别组合）
+        /// </summary>
+        public async Task<List<RaceGroup>> GetByProjectIdAsync(int projectId)
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+
+            // 从 Participants 表查询该项目下的所有分组组合
+            var participantCommand = connection.CreateCommand();
+            participantCommand.CommandText = @"
+                SELECT 
+                    School,
+                    Grade,
+                    Class,
+                    GroupName,
+                    COUNT(*) as ParticipantCount
+                FROM Participants
+                WHERE ProjectId = @projectId
+                    AND GroupName IS NOT NULL
+                    AND GroupName != ''
+                GROUP BY School, Grade, Class, GroupName
+                ORDER BY School, Grade, Class, GroupName
+            ";
+            participantCommand.Parameters.Add(new SqliteParameter("@projectId", projectId));
+
+            var groupInfos = new List<(string School, string? Grade, string? Class, string GroupName, int Count)>();
+            using (var reader = await participantCommand.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    groupInfos.Add((
+                        reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                        reader.IsDBNull(1) ? null : reader.GetString(1),
+                        reader.IsDBNull(2) ? null : reader.GetString(2),
+                        reader.GetString(3),
+                        reader.GetInt32(4)
+                    ));
+                }
+            }
+
+            // 为每个分组获取或创建 RaceGroup 记录，并关联 ProjectId
+            var raceGroups = new List<RaceGroup>();
+            foreach (var info in groupInfos)
+            {
+                if (string.IsNullOrWhiteSpace(info.School)) continue;
+                
+                var raceGroup = await GetOrCreateRaceGroupWithProjectAsync(
+                    projectId, info.School, info.Grade, info.Class, info.GroupName);
+                raceGroup.ParticipantCount = info.Count;
+                raceGroups.Add(raceGroup);
+            }
+
+            return raceGroups;
+        }
+
+        /// <summary>
+        /// 获取或创建分组记录（带项目ID）
+        /// </summary>
+        private async Task<RaceGroup> GetOrCreateRaceGroupWithProjectAsync(
+            int projectId,
+            string school,
+            string? grade,
+            string? classValue,
+            string groupName)
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+
+            // 尝试查找现有记录（按 School, Grade, Class, GroupName 唯一约束）
+            var selectCommand = connection.CreateCommand();
+            selectCommand.CommandText = @"
+                SELECT 
+                    rg.Id,
+                    rg.ProjectId,
+                    rg.School,
+                    rg.Grade,
+                    rg.Class,
+                    rg.GroupName,
+                    rg.ChipGroupId,
+                    rg.RaceLaps,
+                    rg.CreatedAt,
+                    rg.UpdatedAt,
+                    cg.GroupName as ChipGroupName,
+                    cg.Color as ChipGroupColor,
+                    p.Name as ProjectName
+                FROM RaceGroups rg
+                LEFT JOIN ChipGroups cg ON rg.ChipGroupId = cg.Id
+                LEFT JOIN Projects p ON rg.ProjectId = p.Id
+                WHERE rg.School = @school
+                  AND (rg.Grade = @grade OR (rg.Grade IS NULL AND @grade IS NULL))
+                  AND (rg.Class = @class OR (rg.Class IS NULL AND @class IS NULL))
+                  AND rg.GroupName = @groupName
+            ";
+
+            selectCommand.Parameters.Add(new SqliteParameter("@school", school));
+            selectCommand.Parameters.Add(new SqliteParameter("@grade", grade ?? (object)DBNull.Value));
+            selectCommand.Parameters.Add(new SqliteParameter("@class", classValue ?? (object)DBNull.Value));
+            selectCommand.Parameters.Add(new SqliteParameter("@groupName", groupName));
+
+            using (var reader = await selectCommand.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    var existingGroup = MapToRaceGroup(reader);
+                    
+                    // 如果 ProjectId 为空，更新它
+                    if (existingGroup.ProjectId == null)
+                    {
+                        var updateCommand = connection.CreateCommand();
+                        updateCommand.CommandText = @"
+                            UPDATE RaceGroups SET ProjectId = @projectId, UpdatedAt = @updatedAt WHERE Id = @id
+                        ";
+                        updateCommand.Parameters.Add(new SqliteParameter("@projectId", projectId));
+                        updateCommand.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+                        updateCommand.Parameters.Add(new SqliteParameter("@id", existingGroup.Id));
+                        await updateCommand.ExecuteNonQueryAsync();
+                        
+                        existingGroup.ProjectId = projectId;
+                    }
+                    
+                    return existingGroup;
+                }
+            }
+
+            // 如果不存在，创建新记录（带 ProjectId）
+            var insertCommand = connection.CreateCommand();
+            insertCommand.CommandText = @"
+                INSERT INTO RaceGroups (ProjectId, School, Grade, Class, GroupName, RaceLaps, CreatedAt, UpdatedAt)
+                VALUES (@projectId, @school, @grade, @class, @groupName, 1, @createdAt, @updatedAt);
+                SELECT last_insert_rowid();
+            ";
+
+            insertCommand.Parameters.Add(new SqliteParameter("@projectId", projectId));
+            insertCommand.Parameters.Add(new SqliteParameter("@school", school));
+            insertCommand.Parameters.Add(new SqliteParameter("@grade", grade ?? (object)DBNull.Value));
+            insertCommand.Parameters.Add(new SqliteParameter("@class", classValue ?? (object)DBNull.Value));
+            insertCommand.Parameters.Add(new SqliteParameter("@groupName", groupName));
+            insertCommand.Parameters.Add(new SqliteParameter("@createdAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+            insertCommand.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+
+            var newId = Convert.ToInt32(await insertCommand.ExecuteScalarAsync());
+
+            _loggingService?.Info($"Created new RaceGroup with ProjectId {projectId}: {school}-{grade}-{classValue}-{groupName}");
+
+            // 获取项目名称
+            string? projectName = null;
+            var projectCommand = connection.CreateCommand();
+            projectCommand.CommandText = "SELECT Name FROM Projects WHERE Id = @id";
+            projectCommand.Parameters.Add(new SqliteParameter("@id", projectId));
+            var nameResult = await projectCommand.ExecuteScalarAsync();
+            if (nameResult != null && nameResult != DBNull.Value)
+            {
+                projectName = nameResult.ToString();
+            }
+
+            return new RaceGroup
+            {
+                Id = newId,
+                ProjectId = projectId,
+                ProjectName = projectName,
+                School = school,
+                Grade = grade,
+                Class = classValue,
+                GroupName = groupName,
+                RaceLaps = 1,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
         }
 
         /// <summary>
@@ -265,6 +435,7 @@ namespace Timer.Services
             selectCommand.CommandText = @"
                 SELECT 
                     rg.Id,
+                    rg.ProjectId,
                     rg.School,
                     rg.Grade,
                     rg.Class,
@@ -274,9 +445,11 @@ namespace Timer.Services
                     rg.CreatedAt,
                     rg.UpdatedAt,
                     cg.GroupName as ChipGroupName,
-                    cg.Color as ChipGroupColor
+                    cg.Color as ChipGroupColor,
+                    p.Name as ProjectName
                 FROM RaceGroups rg
                 LEFT JOIN ChipGroups cg ON rg.ChipGroupId = cg.Id
+                LEFT JOIN Projects p ON rg.ProjectId = p.Id
                 WHERE rg.School = @school
                   AND (rg.Grade = @grade OR (rg.Grade IS NULL AND @grade IS NULL))
                   AND (rg.Class = @class OR (rg.Class IS NULL AND @class IS NULL))
@@ -532,16 +705,18 @@ namespace Timer.Services
             return new RaceGroup
             {
                 Id = reader.GetInt32(0),
-                School = reader.GetString(1),
-                Grade = reader.IsDBNull(2) ? null : reader.GetString(2),
-                Class = reader.IsDBNull(3) ? null : reader.GetString(3),
-                GroupName = reader.GetString(4),
-                ChipGroupId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                RaceLaps = reader.GetInt32(6),
-                CreatedAt = DateTime.Parse(reader.GetString(7)),
-                UpdatedAt = DateTime.Parse(reader.GetString(8)),
-                ChipGroupName = reader.IsDBNull(9) ? null : reader.GetString(9),
-                ChipGroupColor = reader.IsDBNull(10) ? null : reader.GetString(10)
+                ProjectId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                School = reader.GetString(2),
+                Grade = reader.IsDBNull(3) ? null : reader.GetString(3),
+                Class = reader.IsDBNull(4) ? null : reader.GetString(4),
+                GroupName = reader.GetString(5),
+                ChipGroupId = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                RaceLaps = reader.GetInt32(7),
+                CreatedAt = DateTime.Parse(reader.GetString(8)),
+                UpdatedAt = DateTime.Parse(reader.GetString(9)),
+                ChipGroupName = reader.IsDBNull(10) ? null : reader.GetString(10),
+                ChipGroupColor = reader.IsDBNull(11) ? null : reader.GetString(11),
+                ProjectName = reader.IsDBNull(12) ? null : reader.GetString(12)
             };
         }
 

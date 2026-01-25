@@ -20,9 +20,22 @@ namespace Timer.ViewModels
     {
         private readonly IRaceGroupRepository _raceGroupRepository;
         private readonly IParticipantRepository _participantRepository;
+        private readonly IProjectRepository _projectRepository;
         private readonly ITimerService _timerService;
         private readonly ILoggingService? _loggingService;
         private bool _disposed;
+
+        /// <summary>
+        /// 可用的项目列表
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<Project> _availableProjects = new();
+
+        /// <summary>
+        /// 当前选中的项目
+        /// </summary>
+        [ObservableProperty]
+        private Project? _selectedProject;
 
         /// <summary>
         /// 可用的比赛分组列表（用于选择添加）
@@ -76,11 +89,13 @@ namespace Timer.ViewModels
         public MultiRaceTimerViewModel(
             IRaceGroupRepository raceGroupRepository,
             IParticipantRepository participantRepository,
+            IProjectRepository projectRepository,
             ITimerService timerService,
             ILoggingService? loggingService = null)
         {
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
+            _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
             _loggingService = loggingService;
 
@@ -191,7 +206,7 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 加载可用的比赛分组（不添加到比赛列表）
+        /// 加载可用的比赛分组（根据当前选中的项目）
         /// </summary>
         [RelayCommand]
         private async Task LoadAvailableGroupsAsync()
@@ -199,16 +214,25 @@ namespace Timer.ViewModels
             try
             {
                 IsLoading = true;
-                var groups = await _raceGroupRepository.GetAllAsync();
                 
-                AvailableRaceGroups.Clear();
-                foreach (var group in groups)
+                // 如果选中了项目，则按项目加载
+                if (SelectedProject != null)
                 {
-                    // 过滤掉已经添加的分组
-                    if (!RaceGroups.Any(r => r.RaceGroupId == group.Id))
+                    var groups = await _raceGroupRepository.GetByProjectIdAsync(SelectedProject.Id);
+                    
+                    AvailableRaceGroups.Clear();
+                    foreach (var group in groups)
                     {
-                        AvailableRaceGroups.Add(group);
+                        // 过滤掉已经添加的分组
+                        if (!RaceGroups.Any(r => r.RaceGroupId == group.Id))
+                        {
+                            AvailableRaceGroups.Add(group);
+                        }
                     }
+                }
+                else
+                {
+                    AvailableRaceGroups.Clear();
                 }
 
                 // 同时恢复活跃的比赛
@@ -368,9 +392,9 @@ namespace Timer.ViewModels
             RaceGroups.Remove(group);
             group.Dispose();
 
-            // 重新添加到可用列表
+            // 重新添加到可用列表（仅当该组的项目与当前选中的项目一致时）
             var raceGroup = await _raceGroupRepository.GetByIdAsync(group.RaceGroupId);
-            if (raceGroup != null)
+            if (raceGroup != null && SelectedProject != null && raceGroup.ProjectId == SelectedProject.Id)
             {
                 AvailableRaceGroups.Add(raceGroup);
             }
@@ -853,7 +877,75 @@ namespace Timer.ViewModels
 
         private async Task InitializeAsync()
         {
-            await LoadAvailableGroupsAsync();
+            await LoadProjectsAsync();
+            await RestoreActiveRacesAsync();
+        }
+
+        /// <summary>
+        /// 加载可用的项目列表（状态为正常的项目）
+        /// </summary>
+        [RelayCommand]
+        private async Task LoadProjectsAsync()
+        {
+            try
+            {
+                var projects = await _projectRepository.GetActiveProjectsAsync();
+                AvailableProjects.Clear();
+                foreach (var project in projects)
+                {
+                    AvailableProjects.Add(project);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载项目列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 项目选择改变时的处理
+        /// </summary>
+        partial void OnSelectedProjectChanged(Project? value)
+        {
+            // 清空比赛组选择
+            SelectedAvailableGroup = null;
+            AvailableRaceGroups.Clear();
+
+            if (value != null)
+            {
+                _ = LoadRaceGroupsByProjectAsync(value.Id);
+            }
+        }
+
+        /// <summary>
+        /// 根据项目ID加载比赛组
+        /// </summary>
+        private async Task LoadRaceGroupsByProjectAsync(int projectId)
+        {
+            try
+            {
+                IsLoading = true;
+                var groups = await _raceGroupRepository.GetByProjectIdAsync(projectId);
+                
+                AvailableRaceGroups.Clear();
+                foreach (var group in groups)
+                {
+                    // 过滤掉已经添加的分组
+                    if (!RaceGroups.Any(r => r.RaceGroupId == group.Id))
+                    {
+                        AvailableRaceGroups.Add(group);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载比赛分组失败: {ex.Message}", ex);
+                MessageBox.Show($"加载比赛分组失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         public void Dispose()

@@ -109,6 +109,12 @@ namespace Timer.Services
         Task<IEnumerable<string>> GetDistinctSchoolsAsync();
 
         /// <summary>
+        /// 根据项目ID获取所有唯一的学校列表
+        /// </summary>
+        /// <param name="projectId">项目ID</param>
+        Task<IEnumerable<string>> GetDistinctSchoolsByProjectAsync(int projectId);
+
+        /// <summary>
         /// 根据学校获取所有唯一的年级列表
         /// </summary>
         /// <param name="school">学校名称</param>

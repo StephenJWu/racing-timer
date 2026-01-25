@@ -127,6 +127,7 @@ namespace Timer.Data
 
                 CREATE TABLE IF NOT EXISTS RaceGroups (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ProjectId INTEGER,
                     School TEXT NOT NULL,
                     Grade TEXT,
                     Class TEXT,
@@ -135,10 +136,12 @@ namespace Timer.Data
                     RaceLaps INTEGER DEFAULT 1,
                     CreatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     UpdatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(ProjectId) REFERENCES Projects(Id),
                     FOREIGN KEY(ChipGroupId) REFERENCES ChipGroups(Id),
                     UNIQUE(School, Grade, Class, GroupName)
                 );
 
+                CREATE INDEX IF NOT EXISTS idx_racegroups_projectid ON RaceGroups(ProjectId);
                 CREATE INDEX IF NOT EXISTS idx_racegroups_school ON RaceGroups(School);
                 CREATE INDEX IF NOT EXISTS idx_racegroups_chipgroupid ON RaceGroups(ChipGroupId);
 
@@ -197,6 +200,9 @@ namespace Timer.Data
 
             // 升级现有表结构：为 Participants 表添加 ProjectId 列（如果不存在）
             await AddColumnIfNotExistsAsync(connection, "Participants", "ProjectId", "INTEGER");
+
+            // 升级现有表结构：为 RaceGroups 表添加 ProjectId 列（如果不存在）
+            await AddColumnIfNotExistsAsync(connection, "RaceGroups", "ProjectId", "INTEGER");
         }
 
         /// <summary>
