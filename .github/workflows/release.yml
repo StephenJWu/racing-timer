@@ -37,13 +37,35 @@ jobs:
         echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       shell: pwsh
       
+    - name: 获取版本号
+      id: get_version
+      run: |
+        # 从 git tag 获取版本号（去掉 'v' 前缀）
+        if ("${{ github.ref }}" -like "refs/tags/*") {
+          $version = "${{ github.ref }}" -replace "refs/tags/v", ""
+        } else {
+          $version = "1.0.0-dev"
+        }
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "版本号: $version"
+      shell: pwsh
+      
     - name: 构建安装程序
       run: |
         # 创建输出目录
         New-Item -ItemType Directory -Force -Path installer
         
-        # 使用 Inno Setup 编译
-        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+        # 获取版本号（从 git tag 或使用默认值）
+        if ("${{ github.ref }}" -like "refs/tags/*") {
+          $version = "${{ github.ref }}" -replace "refs/tags/v", ""
+        } else {
+          $version = "1.0.0-dev"
+        }
+        
+        Write-Host "使用版本号: $version"
+        
+        # 使用 Inno Setup 编译，传递版本号参数
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" setup.iss
         
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Inno Setup 构建失败！"
@@ -56,23 +78,6 @@ jobs:
       
     - name: 压缩便携版
       run: Compress-Archive -Path Timer/Timer/publish/* -DestinationPath Timer-Portable-x64.zip
-      
-    - name: 获取版本号
-      id: get_version
-      run: |
-        if ("${{ github.ref }}" -like "refs/tags/*") {
-          $version = "${{ github.ref }}" -replace "refs/tags/", ""
-        } else {
-          $version = "dev-${{ github.sha }}".Substring(0, 15)
-        }
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        
-        # 获取安装包文件名
-        $installerFile = Get-ChildItem installer\*.exe | Select-Object -First 1 -ExpandProperty Name
-        if ($installerFile) {
-          echo "installer_name=$installerFile" >> $env:GITHUB_OUTPUT
-        }
-      shell: pwsh
       
     - name: 创建 GitHub Release
       uses: softprops/action-gh-release@v2

@@ -1,8 +1,13 @@
 ; 比赛计时系统 - Inno Setup 脚本
 ; 请确保已安装 Inno Setup: https://jrsoftware.org/isinfo.php
 
+; 版本号可以通过命令行参数传入: /DMyAppVersion=1.0.4
+; 如果没有传入，则使用默认值
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.4"
+#endif
+
 #define MyAppName "比赛计时系统"
-#define MyAppVersion "1.0.4"
 #define MyAppPublisher "Race Timer Pro"
 #define MyAppExeName "Timer.exe"
 #define MyAppURL "https://github.com/karsonto/racing-timer"
