@@ -351,16 +351,10 @@ namespace Timer.Services
 
             var conditions = new List<string>();
             
-            if (filter.StartDate.HasValue)
+            if (filter.ProjectId.HasValue && filter.ProjectId.Value > 0)
             {
-                conditions.Add("date(rr.StartTime) >= date(@StartDate)");
-                command.Parameters.AddWithValue("@StartDate", filter.StartDate.Value.ToString("yyyy-MM-dd"));
-            }
-            
-            if (filter.EndDate.HasValue)
-            {
-                conditions.Add("date(rr.StartTime) <= date(@EndDate)");
-                command.Parameters.AddWithValue("@EndDate", filter.EndDate.Value.ToString("yyyy-MM-dd"));
+                conditions.Add("rg.ProjectId = @ProjectId");
+                command.Parameters.AddWithValue("@ProjectId", filter.ProjectId.Value);
             }
             
             if (!string.IsNullOrWhiteSpace(filter.School))
@@ -445,16 +439,10 @@ namespace Timer.Services
 
             var conditions = new List<string>();
             
-            if (filter.StartDate.HasValue)
+            if (filter.ProjectId.HasValue && filter.ProjectId.Value > 0)
             {
-                conditions.Add("date(rr.StartTime) >= date(@StartDate)");
-                command.Parameters.AddWithValue("@StartDate", filter.StartDate.Value.ToString("yyyy-MM-dd"));
-            }
-            
-            if (filter.EndDate.HasValue)
-            {
-                conditions.Add("date(rr.StartTime) <= date(@EndDate)");
-                command.Parameters.AddWithValue("@EndDate", filter.EndDate.Value.ToString("yyyy-MM-dd"));
+                conditions.Add("rg.ProjectId = @ProjectId");
+                command.Parameters.AddWithValue("@ProjectId", filter.ProjectId.Value);
             }
             
             if (!string.IsNullOrWhiteSpace(filter.School))
@@ -506,6 +494,34 @@ namespace Timer.Services
                 WHERE rr.Status = 'Completed' AND rg.School IS NOT NULL AND rg.School != ''
                 ORDER BY rg.School
             ";
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                results.Add(reader.GetString(0));
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// 根据项目ID获取成绩查询中的学校列表
+        /// </summary>
+        public async Task<List<string>> GetScoreSchoolsByProjectAsync(int projectId)
+        {
+            var results = new List<string>();
+            var connection = await _dbContext.GetConnectionAsync();
+            var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT DISTINCT rg.School
+                FROM RaceRecords rr
+                INNER JOIN RaceGroups rg ON rr.RaceGroupId = rg.Id
+                WHERE rr.Status = 'Completed' 
+                    AND rg.ProjectId = @ProjectId
+                    AND rg.School IS NOT NULL AND rg.School != ''
+                ORDER BY rg.School
+            ";
+            command.Parameters.AddWithValue("@ProjectId", projectId);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())

@@ -13,14 +13,9 @@ namespace Timer.Models
         public string? SearchKeyword { get; set; }
 
         /// <summary>
-        /// 开始日期
+        /// 项目ID筛选
         /// </summary>
-        public DateTime? StartDate { get; set; }
-
-        /// <summary>
-        /// 结束日期
-        /// </summary>
-        public DateTime? EndDate { get; set; }
+        public int? ProjectId { get; set; }
 
         /// <summary>
         /// 组别名称筛选
@@ -55,7 +50,7 @@ namespace Timer.Models
         /// <summary>
         /// 每页记录数
         /// </summary>
-        public int PageSize { get; set; } = 20;
+        public int PageSize { get; set; } = 10;
 
         /// <summary>
         /// 计算跳过的记录数（用于分页）

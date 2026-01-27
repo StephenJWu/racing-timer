@@ -8,14 +8,9 @@ namespace Timer.Models
     public class ScoreSearchFilter
     {
         /// <summary>
-        /// 比赛开始日期
+        /// 项目ID筛选
         /// </summary>
-        public DateTime? StartDate { get; set; }
-
-        /// <summary>
-        /// 比赛结束日期
-        /// </summary>
-        public DateTime? EndDate { get; set; }
+        public int? ProjectId { get; set; }
 
         /// <summary>
         /// 学校名称筛选

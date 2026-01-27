@@ -28,6 +28,12 @@ namespace Timer.ViewModels
         private Project? _selectedProjectItem;
         private int _totalCount;
         private bool _isLoading;
+        private int _currentPage = 1;
+        private int _totalPages = 1;
+        private const int PageSize = 10;
+
+        // 全量数据（用于分页）
+        private System.Collections.Generic.List<Project> _allProjects = new();
 
         private const string AllOption = "全部";
 
@@ -48,6 +54,8 @@ namespace Timer.ViewModels
             EditCommand = new AsyncRelayCommand<Project>(EditProjectAsync);
             DeleteCommand = new AsyncRelayCommand<Project>(DeleteProjectAsync);
             BatchDeleteCommand = new AsyncRelayCommand(BatchDeleteAsync);
+            PreviousPageCommand = new RelayCommand(PreviousPage, () => CurrentPage > 1);
+            NextPageCommand = new RelayCommand(NextPage, () => CurrentPage < TotalPages);
 
             // 加载初始数据
             _ = LoadInitialDataAsync();
@@ -91,7 +99,46 @@ namespace Timer.ViewModels
         public int TotalCount
         {
             get => _totalCount;
-            set => SetProperty(ref _totalCount, value);
+            set
+            {
+                if (SetProperty(ref _totalCount, value))
+                {
+                    UpdateTotalPages();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 当前页码
+        /// </summary>
+        public int CurrentPage
+        {
+            get => _currentPage;
+            set
+            {
+                if (SetProperty(ref _currentPage, value))
+                {
+                    PreviousPageCommand.NotifyCanExecuteChanged();
+                    NextPageCommand.NotifyCanExecuteChanged();
+                    LoadCurrentPageData();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 总页数
+        /// </summary>
+        public int TotalPages
+        {
+            get => _totalPages;
+            set
+            {
+                if (SetProperty(ref _totalPages, value))
+                {
+                    PreviousPageCommand.NotifyCanExecuteChanged();
+                    NextPageCommand.NotifyCanExecuteChanged();
+                }
+            }
         }
 
         /// <summary>
@@ -109,6 +156,8 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand<Project> EditCommand { get; }
         public IAsyncRelayCommand<Project> DeleteCommand { get; }
         public IAsyncRelayCommand BatchDeleteCommand { get; }
+        public IRelayCommand PreviousPageCommand { get; }
+        public IRelayCommand NextPageCommand { get; }
 
         /// <summary>
         /// 加载初始数据
@@ -165,13 +214,13 @@ namespace Timer.ViewModels
                 var projectName = (SelectedProject == AllOption) ? null : SelectedProject;
                 var projects = await _projectRepository.QueryAsync(StartDate, EndDate, projectName);
 
-                Projects.Clear();
-                foreach (var project in projects)
-                {
-                    Projects.Add(project);
-                }
+                _allProjects = projects.ToList();
+                TotalCount = _allProjects.Count;
+                _currentPage = 1;
+                OnPropertyChanged(nameof(CurrentPage));
+                
+                LoadCurrentPageData();
 
-                TotalCount = Projects.Count;
                 _loggingService?.Info($"[查询结果] 查询到 {TotalCount} 个项目");
             }
             catch (Exception ex)
@@ -182,6 +231,55 @@ namespace Timer.ViewModels
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// 加载当前页数据
+        /// </summary>
+        private void LoadCurrentPageData()
+        {
+            Projects.Clear();
+            var pageData = _allProjects
+                .Skip((CurrentPage - 1) * PageSize)
+                .Take(PageSize);
+            foreach (var project in pageData)
+            {
+                Projects.Add(project);
+            }
+        }
+
+        /// <summary>
+        /// 更新总页数
+        /// </summary>
+        private void UpdateTotalPages()
+        {
+            TotalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
+            if (TotalPages == 0)
+            {
+                TotalPages = 1;
+            }
+        }
+
+        /// <summary>
+        /// 上一页
+        /// </summary>
+        private void PreviousPage()
+        {
+            if (CurrentPage > 1)
+            {
+                CurrentPage--;
+            }
+        }
+
+        /// <summary>
+        /// 下一页
+        /// </summary>
+        private void NextPage()
+        {
+            if (CurrentPage < TotalPages)
+            {
+                CurrentPage++;
             }
         }
 

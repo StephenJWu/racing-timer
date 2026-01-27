@@ -77,6 +77,11 @@ namespace Timer.Services
         Task<List<string>> GetScoreSchoolsAsync();
 
         /// <summary>
+        /// 根据项目ID获取成绩查询中的学校列表
+        /// </summary>
+        Task<List<string>> GetScoreSchoolsByProjectAsync(int projectId);
+
+        /// <summary>
         /// 获取指定学校下的年级列表
         /// </summary>
         Task<List<string>> GetScoreGradesAsync(string school);

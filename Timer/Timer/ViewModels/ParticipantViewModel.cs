@@ -26,6 +26,9 @@ namespace Timer.ViewModels
         private readonly IParticipantRepository _repository;
         private readonly IExcelImportService _excelImportService;
         private readonly IProjectRepository _projectRepository;
+        private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IRaceRecordRepository _raceRecordRepository;
+        private readonly ILapRecordRepository _lapRecordRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
         private bool _disposed;
@@ -40,9 +43,9 @@ namespace Timer.ViewModels
         private int _currentPage = 1;
         private int _totalPages;
 
-        // 日期范围
-        private DateTime? _startDate;
-        private DateTime? _endDate;
+        // 项目列表
+        private ObservableCollection<Project> _projects = new();
+        private Project? _selectedProjectItem;
 
         // 级联下拉框数据源
         private ObservableCollection<string> _schools = new();
@@ -57,12 +60,18 @@ namespace Timer.ViewModels
             IParticipantRepository repository,
             IExcelImportService excelImportService,
             IProjectRepository projectRepository,
+            IRaceGroupRepository raceGroupRepository,
+            IRaceRecordRepository raceRecordRepository,
+            ILapRecordRepository lapRecordRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _excelImportService = excelImportService ?? throw new ArgumentNullException(nameof(excelImportService));
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+            _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
+            _lapRecordRepository = lapRecordRepository ?? throw new ArgumentNullException(nameof(lapRecordRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
 
@@ -73,6 +82,7 @@ namespace Timer.ViewModels
             PreviousPageCommand = new RelayCommand(PreviousPage, () => CurrentPage > 1);
             NextPageCommand = new RelayCommand(NextPage, () => CurrentPage < TotalPages);
             RefreshCommand = new AsyncRelayCommand(LoadParticipantsAsync);
+            LoadProjectsCommand = new AsyncRelayCommand(LoadProjectsAsync);
             LoadSchoolsCommand = new AsyncRelayCommand(LoadSchoolsAsync);
             SchoolChangedCommand = new AsyncRelayCommand<string>(OnSchoolChangedAsync);
             GradeChangedCommand = new AsyncRelayCommand<string>(OnGradeChangedAsync);
@@ -83,8 +93,14 @@ namespace Timer.ViewModels
 
             WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
 
+            // 初始化下拉框默认值（全部选项）
+            Schools = new ObservableCollection<string> { AllOption };
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
+
             // 初始化时加载数据
-            _ = LoadSchoolsAsync();
+            _ = LoadProjectsAsync();
             _ = LoadParticipantsAsync();
         }
 
@@ -96,7 +112,7 @@ namespace Timer.ViewModels
             if (message.Value == DataDomain.Participants)
             {
                 _ = LoadParticipantsAsync();
-                _ = RefreshFilterSourcesAsync();
+                _ = LoadProjectsAsync();
             }
         }
 
@@ -129,20 +145,7 @@ namespace Timer.ViewModels
         public SearchFilter SearchFilter
         {
             get => _searchFilter;
-            set
-            {
-                if (SetProperty(ref _searchFilter, value))
-                {
-                    // 当SearchFilter改变时，同步日期范围
-                    if (value != null)
-                    {
-                        _startDate = value.StartDate;
-                        _endDate = value.EndDate;
-                        OnPropertyChanged(nameof(StartDate));
-                        OnPropertyChanged(nameof(EndDate));
-                    }
-                }
-            }
+            set => SetProperty(ref _searchFilter, value);
         }
 
         /// <summary>
@@ -251,6 +254,11 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand RefreshCommand { get; }
 
         /// <summary>
+        /// 加载项目列表命令
+        /// </summary>
+        public IAsyncRelayCommand LoadProjectsCommand { get; }
+
+        /// <summary>
         /// 加载学校列表命令
         /// </summary>
         public IAsyncRelayCommand LoadSchoolsCommand { get; }
@@ -286,31 +294,48 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand BatchDeleteCommand { get; }
 
         /// <summary>
-        /// 开始日期
+        /// 项目列表
         /// </summary>
-        public DateTime? StartDate
+        public ObservableCollection<Project> Projects
         {
-            get => _startDate;
-            set
-            {
-                if (SetProperty(ref _startDate, value))
-                {
-                    SearchFilter.StartDate = value;
-                }
-            }
+            get => _projects;
+            set => SetProperty(ref _projects, value);
         }
 
         /// <summary>
-        /// 结束日期
+        /// 选中的项目（用于绑定）
         /// </summary>
-        public DateTime? EndDate
+        public Project? SelectedProject
         {
-            get => _endDate;
+            get => _selectedProjectItem;
             set
             {
-                if (SetProperty(ref _endDate, value))
+                if (SetProperty(ref _selectedProjectItem, value))
                 {
-                    SearchFilter.EndDate = value;
+                    // 更新 SearchFilter 中的 ProjectId
+                    SearchFilter.ProjectId = value?.Id;
+                    
+                    // 重置下级下拉框
+                    SearchFilter.School = null;
+                    SearchFilter.Grade = null;
+                    SearchFilter.Class = null;
+                    SearchFilter.GroupName = null;
+                    
+                    Schools = new ObservableCollection<string> { AllOption };
+                    Grades = new ObservableCollection<string> { AllOption };
+                    Classes = new ObservableCollection<string> { AllOption };
+                    GroupNames = new ObservableCollection<string> { AllOption };
+                    
+                    OnPropertyChanged(nameof(SelectedSchool));
+                    OnPropertyChanged(nameof(SelectedGrade));
+                    OnPropertyChanged(nameof(SelectedClass));
+                    OnPropertyChanged(nameof(SelectedGroup));
+                    
+                    // 加载该项目下的学校列表
+                    if (value != null && value.Id > 0)
+                    {
+                        _ = LoadSchoolsByProjectAsync(value.Id);
+                    }
                 }
             }
         }
@@ -439,9 +464,21 @@ namespace Timer.ViewModels
                     if (selectedProject == null || string.IsNullOrEmpty(selectedFilePath))
                         return;
 
+                    // 1. 提示会清除这个项目下的所有参赛人员
+                    var confirmResult = MessageBox.Show(
+                        $"导入将清除项目 \"{selectedProject.Name}\" 下的所有参赛人员、人员分组和比赛成绩记录。\n\n是否继续？",
+                        "确认导入",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (confirmResult != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+
                     _loggingService?.Info($"[导入] 开始导入参赛人员, 项目: {selectedProject.Name}, 文件: {selectedFilePath}");
 
-                    // 显示遮罩层
+                    // 2. 打开遮罩层，显示"处理中"
                     IsLoading = true;
                     ImportProgress = 0;
                     ImportResult = null;
@@ -455,10 +492,11 @@ namespace Timer.ViewModels
 
                     try
                     {
-                        // 先删除该项目下的所有参赛人员
-                        await _repository.DeleteByProjectIdAsync(selectedProject.Id);
-                        _loggingService?.Info($"已清空项目 {selectedProject.Name} 的参赛人员数据，准备重新导入");
+                        // 3. 进行数据库清理：清理这个项目下的所有参赛人员、人员分组、项目比赛成绩记录
+                        await CleanupProjectDataAsync(selectedProject.Id);
+                        _loggingService?.Info($"已清空项目 {selectedProject.Name} 的所有相关数据，准备重新导入");
 
+                        // 4. 完成后，进行数据导入
                         // 读取Excel文件
                         var participants = await _excelImportService.ReadFromFileAsync(selectedFilePath);
 
@@ -472,6 +510,11 @@ namespace Timer.ViewModels
                         var progress = new Progress<double>(value => ImportProgress = value);
                         ImportResult = await _excelImportService.ImportAsync(participants, progress);
 
+                        // 5. 导入完成后，关闭遮罩层
+                        IsLoading = false;
+                        await Task.Delay(50);
+
+                        // 6. 提示导入成功、失败数据
                         if (ImportResult.IsSuccess())
                         {
                             resultMessage = $"成功导入{ImportResult.SuccessCount}条记录";
@@ -490,9 +533,8 @@ namespace Timer.ViewModels
                             resultIcon = MessageBoxImage.Warning;
                         }
 
-                        // 刷新列表（使用内部方法，不重置IsLoading）
-                        await LoadParticipantsInternalAsync();
-                        // 刷新筛选项数据源（学校/年级/班级/组别）
+                        // 7. 查询一遍，刷新最新的数据到查询结果表
+                        await LoadParticipantsAsync();
                         await RefreshFilterSourcesAsync();
 
                         // 通知其它页面：人员/分组统计可能变化
@@ -505,12 +547,7 @@ namespace Timer.ViewModels
                         resultMessage = $"导入Excel文件失败: {ex.Message}";
                         resultTitle = "错误";
                         resultIcon = MessageBoxImage.Error;
-                    }
-                    finally
-                    {
-                        // 关闭遮罩层
                         IsLoading = false;
-                        // 让UI有机会刷新关闭遮罩层
                         await Task.Delay(50);
                     }
 
@@ -533,6 +570,61 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
+        /// 清理项目相关的所有数据（参赛人员、人员分组、比赛成绩记录）
+        /// </summary>
+        private async Task CleanupProjectDataAsync(int projectId)
+        {
+            try
+            {
+                _loggingService?.Info($"[清理数据] 开始清理项目 ID={projectId} 的所有相关数据");
+                var connection = await _dbContext.GetConnectionAsync();
+
+                // 1. 删除该项目下所有 RaceGroups 关联的 LapRecords（通过 JOIN 删除）
+                var deleteLapRecordsCommand = connection.CreateCommand();
+                deleteLapRecordsCommand.CommandText = @"
+                    DELETE FROM LapRecords 
+                    WHERE RaceRecordId IN (
+                        SELECT rr.Id 
+                        FROM RaceRecords rr
+                        INNER JOIN RaceGroups rg ON rr.RaceGroupId = rg.Id
+                        WHERE rg.ProjectId = @ProjectId
+                    )";
+                deleteLapRecordsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var lapRecordsDeleted = await deleteLapRecordsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {lapRecordsDeleted} 条圈次记录");
+
+                // 2. 删除该项目下所有 RaceGroups 关联的 RaceRecords
+                var deleteRaceRecordsCommand = connection.CreateCommand();
+                deleteRaceRecordsCommand.CommandText = @"
+                    DELETE FROM RaceRecords 
+                    WHERE RaceGroupId IN (
+                        SELECT Id FROM RaceGroups WHERE ProjectId = @ProjectId
+                    )";
+                deleteRaceRecordsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var raceRecordsDeleted = await deleteRaceRecordsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {raceRecordsDeleted} 条比赛记录");
+
+                // 3. 删除该项目下的所有 RaceGroups
+                var deleteRaceGroupsCommand = connection.CreateCommand();
+                deleteRaceGroupsCommand.CommandText = "DELETE FROM RaceGroups WHERE ProjectId = @ProjectId";
+                deleteRaceGroupsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var raceGroupsDeleted = await deleteRaceGroupsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {raceGroupsDeleted} 个比赛分组");
+
+                // 4. 删除该项目下的所有参赛人员
+                await _repository.DeleteByProjectIdAsync(projectId);
+                _loggingService?.Info($"[清理数据] 已删除项目 ID={projectId} 的所有参赛人员");
+
+                _loggingService?.Info($"[清理数据] 项目 ID={projectId} 的所有相关数据清理完成");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"[清理数据] 清理项目数据失败: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// 延迟后自动隐藏导入结果
         /// </summary>
         private async Task HideImportResultAfterDelayAsync()
@@ -547,7 +639,7 @@ namespace Timer.ViewModels
         private void Search()
         {
             _loggingService?.Info("[按钮点击] 参赛人员 - 查询按钮");
-            _loggingService?.Debug($"[查询条件] School={SearchFilter.School}, Grade={SearchFilter.Grade}, Class={SearchFilter.Class}, GroupName={SearchFilter.GroupName}, StartDate={StartDate}, EndDate={EndDate}");
+            _loggingService?.Debug($"[查询条件] ProjectId={SearchFilter.ProjectId}, School={SearchFilter.School}, Grade={SearchFilter.Grade}, Class={SearchFilter.Class}, GroupName={SearchFilter.GroupName}");
             CurrentPage = 1;
             _ = LoadParticipantsAsync();
         }
@@ -559,14 +651,19 @@ namespace Timer.ViewModels
         {
             _loggingService?.Info("[按钮点击] 参赛人员 - 清除搜索按钮");
             SearchFilter = new SearchFilter();
-            StartDate = null;
-            EndDate = null;
-            Grades.Clear();
-            Classes.Clear();
-            GroupNames.Clear();
+            _selectedProjectItem = null;
+            OnPropertyChanged(nameof(SelectedProject));
+            // 重置下拉框为只有"全部"选项
+            Schools = new ObservableCollection<string> { AllOption };
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
+            OnPropertyChanged(nameof(SelectedSchool));
+            OnPropertyChanged(nameof(SelectedGrade));
+            OnPropertyChanged(nameof(SelectedClass));
+            OnPropertyChanged(nameof(SelectedGroup));
             CurrentPage = 1;
-            // 重新加载学校列表，会自动设置默认选择"全部"
-            _ = LoadSchoolsAsync();
+            _ = LoadProjectsAsync();
             _ = LoadParticipantsAsync();
         }
 
@@ -668,7 +765,54 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 加载学校列表
+        /// 加载项目列表
+        /// </summary>
+        private async Task LoadProjectsAsync()
+        {
+            try
+            {
+                var projects = await _projectRepository.GetActiveProjectsAsync();
+                var projectList = new ObservableCollection<Project>();
+                
+                // 添加"全部"选项作为第一项（Id=0 表示全部）
+                projectList.Add(new Project { Id = 0, Name = AllOption });
+                
+                foreach (var project in projects)
+                {
+                    projectList.Add(project);
+                }
+                
+                Projects = projectList;
+                
+                // 默认选择"全部"
+                _selectedProjectItem = projectList.FirstOrDefault(p => p.Id == 0);
+                OnPropertyChanged(nameof(SelectedProject));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载项目列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 根据项目ID加载学校列表
+        /// </summary>
+        private async Task LoadSchoolsByProjectAsync(int projectId)
+        {
+            try
+            {
+                var schools = await _repository.GetDistinctSchoolsByProjectAsync(projectId);
+                Schools = AddAllOption(schools);
+                OnPropertyChanged(nameof(SelectedSchool));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载学校列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 加载学校列表（所有项目）
         /// </summary>
         private async Task LoadSchoolsAsync()
         {
@@ -702,26 +846,10 @@ namespace Timer.ViewModels
         /// </summary>
         private async Task RefreshFilterSourcesAsync()
         {
-            // 先刷新学校（内部会根据当前选择触发级联刷新）
-            await LoadSchoolsAsync();
-
-            // 如果没有选学校，则提供“全量”年级列表，方便用户直接选年级再选学校（可按需要调整）
-            if (string.IsNullOrWhiteSpace(SearchFilter.School))
-            {
-                try
-                {
-                    var grades = await _repository.GetDistinctGradesAsync(null);
-                    Grades = AddAllOption(grades);
-                    // 默认选择"全部"
-                    SearchFilter.Grade = null;
-                    OnPropertyChanged(nameof(SelectedGrade));
-                }
-                catch (Exception ex)
-                {
-                    _loggingService?.Error($"刷新年级列表失败: {ex.Message}", ex);
-                }
-            }
+            // 先刷新项目列表
+            await LoadProjectsAsync();
         }
+
         /// <summary>
         /// 学校选择改变时的处理
         /// </summary>

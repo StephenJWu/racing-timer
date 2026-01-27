@@ -164,10 +164,10 @@ namespace Timer.Services
                 return;
             }
 
-            // 检查准考证号唯一性（如果提供了准考证号）
+            // 检查准考证号唯一性（如果提供了准考证号，在同一项目内）
             if (!string.IsNullOrWhiteSpace(participant.ExamNumber))
             {
-                var exists = await repository.ExistsByExamNumberAsync(participant.ExamNumber);
+                var exists = await repository.ExistsByExamNumberAsync(participant.ExamNumber, participant.ProjectId);
                 if (exists)
                 {
                     // 如果是更新操作，需要检查是否是同一条记录

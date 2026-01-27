@@ -95,17 +95,11 @@ namespace Timer.Services
                 parameters.Add(new SqliteParameter("@class", filter.Class));
             }
 
-            // Date 字段在库中是字符串（yyyy-MM-dd HH:mm:ss），这里统一按“日期部分”比较，避免 EndDate 当天筛不出数据
-            if (filter.StartDate.HasValue)
+            // 按项目ID筛选（0表示全部）
+            if (filter.ProjectId.HasValue && filter.ProjectId.Value > 0)
             {
-                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
-                parameters.Add(new SqliteParameter("@startDate", filter.StartDate.Value.ToString("yyyy-MM-dd")));
-            }
-
-            if (filter.EndDate.HasValue)
-            {
-                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
-                parameters.Add(new SqliteParameter("@endDate", filter.EndDate.Value.ToString("yyyy-MM-dd")));
+                whereClauses.Add("ProjectId = @projectId");
+                parameters.Add(new SqliteParameter("@projectId", filter.ProjectId.Value));
             }
 
             var whereClause = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
@@ -242,17 +236,11 @@ namespace Timer.Services
                 parameters.Add(new SqliteParameter("@class", filter.Class));
             }
 
-            // Date 字段在库中是字符串（yyyy-MM-dd HH:mm:ss），这里统一按“日期部分”比较，避免 EndDate 当天筛不出数据
-            if (filter.StartDate.HasValue)
+            // 按项目ID筛选（0表示全部）
+            if (filter.ProjectId.HasValue && filter.ProjectId.Value > 0)
             {
-                whereClauses.Add("substr(Date, 1, 10) >= @startDate");
-                parameters.Add(new SqliteParameter("@startDate", filter.StartDate.Value.ToString("yyyy-MM-dd")));
-            }
-
-            if (filter.EndDate.HasValue)
-            {
-                whereClauses.Add("substr(Date, 1, 10) <= @endDate");
-                parameters.Add(new SqliteParameter("@endDate", filter.EndDate.Value.ToString("yyyy-MM-dd")));
+                whereClauses.Add("ProjectId = @projectId");
+                parameters.Add(new SqliteParameter("@projectId", filter.ProjectId.Value));
             }
 
             var whereClause = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
@@ -391,9 +379,9 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 检查准考证号是否已存在
+        /// 检查准考证号是否已存在（在同一项目内）
         /// </summary>
-        public async Task<bool> ExistsByExamNumberAsync(string examNumber)
+        public async Task<bool> ExistsByExamNumberAsync(string examNumber, int? projectId)
         {
             if (string.IsNullOrWhiteSpace(examNumber))
             {
@@ -403,8 +391,17 @@ namespace Timer.Services
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
-            command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber";
-            command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+            if (projectId.HasValue && projectId.Value > 0)
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber AND ProjectId = @projectId";
+                command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+                command.Parameters.Add(new SqliteParameter("@projectId", projectId.Value));
+            }
+            else
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber";
+                command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+            }
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
@@ -431,14 +428,22 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 获取当前最大序号
+        /// 获取指定项目的最大序号
         /// </summary>
-        public async Task<int> GetMaxSequenceNumberAsync()
+        public async Task<int> GetMaxSequenceNumberAsync(int? projectId)
         {
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
-            command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants";
+            if (projectId.HasValue && projectId.Value > 0)
+            {
+                command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants WHERE ProjectId = @ProjectId";
+                command.Parameters.AddWithValue("@ProjectId", projectId.Value);
+            }
+            else
+            {
+                command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants";
+            }
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result);
@@ -507,6 +512,35 @@ namespace Timer.Services
             var command = connection.CreateCommand();
 
             command.CommandText = "SELECT DISTINCT School FROM Participants WHERE School IS NOT NULL AND School != '' ORDER BY School";
+
+            var schools = new List<string>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                schools.Add(reader.GetString(0));
+            }
+
+            return schools;
+        }
+
+        /// <summary>
+        /// 根据项目ID获取所有唯一的学校列表
+        /// </summary>
+        public async Task<IEnumerable<string>> GetDistinctSchoolsByProjectAsync(int projectId)
+        {
+            var connection = await _dbContext.GetConnectionAsync();
+            var command = connection.CreateCommand();
+
+            command.CommandText = @"
+                SELECT DISTINCT School 
+                FROM Participants 
+                WHERE ProjectId = @ProjectId 
+                    AND School IS NOT NULL 
+                    AND School != '' 
+                ORDER BY School";
+            command.Parameters.AddWithValue("@ProjectId", projectId);
+
+            _loggingService?.Debug($"[SQL] GetDistinctSchoolsByProjectAsync: {command.CommandText} | @ProjectId={projectId}");
 
             var schools = new List<string>();
             using var reader = await command.ExecuteReaderAsync();

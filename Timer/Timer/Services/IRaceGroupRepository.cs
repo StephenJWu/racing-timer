@@ -12,16 +12,14 @@ namespace Timer.Services
         /// <summary>
         /// 根据条件查询比赛分组（关联查询参赛人数和芯片组信息）
         /// </summary>
-        /// <param name="startDate">开始日期</param>
-        /// <param name="endDate">结束日期</param>
-        /// <param name="school">学校（必填）</param>
+        /// <param name="projectId">项目ID（可选，null表示全部）</param>
+        /// <param name="school">学校（可选）</param>
         /// <param name="grade">年级（可选）</param>
         /// <param name="classValue">班级（可选）</param>
         /// <param name="groupName">组别（可选）</param>
         /// <returns>符合条件的分组列表</returns>
         Task<IEnumerable<RaceGroup>> QueryRaceGroupsAsync(
-            System.DateTime? startDate,
-            System.DateTime? endDate,
+            int? projectId,
             string? school,
             string? grade = null,
             string? classValue = null,
@@ -32,6 +30,13 @@ namespace Timer.Services
         /// </summary>
         /// <returns>所有分组列表</returns>
         Task<List<RaceGroup>> GetAllAsync();
+
+        /// <summary>
+        /// 根据项目ID获取比赛分组
+        /// </summary>
+        /// <param name="projectId">项目ID</param>
+        /// <returns>该项目下的分组列表</returns>
+        Task<List<RaceGroup>> GetByProjectIdAsync(int projectId);
 
         /// <summary>
         /// 根据ID获取单个分组

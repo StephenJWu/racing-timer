@@ -26,6 +26,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- 顶部查询区 -->
@@ -101,9 +102,10 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
-                          Height="500"
+                          Height="442"
                           RowHeight="40"
-                          ColumnHeaderHeight="40">
+                          ColumnHeaderHeight="40"
+                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
                     <!-- 单元格样式：垂直居中，左对齐 -->
                     <DataGrid.CellStyle>
                         <Style TargetType="DataGridCell">
@@ -184,6 +186,35 @@
                 </DataGrid>
             </StackPanel>
         </Border>
+
+            <!-- 分页控件 -->
+            <Grid Grid.Row="2" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="上一页" 
+                            Command="{Binding PreviousPageCommand}"
+                            Padding="12,6"
+                            Margin="0,0,8,0"
+                            FontSize="12"/>
+                    <TextBlock Text="{Binding CurrentPage, StringFormat='第 {0} 页'}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource TextColorBrush}"
+                               Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding TotalPages, StringFormat='共 {0} 页'}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               Margin="0,0,8,0"/>
+                    <Button Content="下一页" 
+                            Command="{Binding NextPageCommand}"
+                            Padding="12,6"
+                            FontSize="12"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- 加载遮罩层 -->

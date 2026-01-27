@@ -15,6 +15,18 @@ namespace Timer.Models
         private int _id;
 
         /// <summary>
+        /// 关联的项目ID（外键关联Projects）
+        /// </summary>
+        [ObservableProperty]
+        private int? _projectId;
+
+        /// <summary>
+        /// 项目名称（非持久化属性，用于UI显示）
+        /// </summary>
+        [ObservableProperty]
+        private string? _projectName;
+
+        /// <summary>
         /// 学校名称
         /// </summary>
         [ObservableProperty]

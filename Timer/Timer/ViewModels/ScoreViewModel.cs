@@ -23,6 +23,7 @@ namespace Timer.ViewModels
         private const string AllOption = "全部";
         
         private readonly ILapRecordRepository _lapRecordRepository;
+        private readonly IProjectRepository _projectRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
         private bool _disposed;
@@ -35,9 +36,9 @@ namespace Timer.ViewModels
         private int _currentPage = 1;
         private int _totalPages;
 
-        // 日期范围
-        private DateTime? _startDate;
-        private DateTime? _endDate;
+        // 项目列表
+        private ObservableCollection<Project> _projects = new();
+        private Project? _selectedProjectItem;
 
         // 级联下拉框数据源
         private ObservableCollection<string> _schools = new();
@@ -50,10 +51,12 @@ namespace Timer.ViewModels
         /// </summary>
         public ScoreViewModel(
             ILapRecordRepository lapRecordRepository,
+            IProjectRepository projectRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
             _lapRecordRepository = lapRecordRepository ?? throw new ArgumentNullException(nameof(lapRecordRepository));
+            _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
 
@@ -64,6 +67,7 @@ namespace Timer.ViewModels
             PreviousPageCommand = new RelayCommand(PreviousPage, () => CurrentPage > 1);
             NextPageCommand = new RelayCommand(NextPage, () => CurrentPage < TotalPages);
             RefreshCommand = new AsyncRelayCommand(LoadScoresAsync);
+            LoadProjectsCommand = new AsyncRelayCommand(LoadProjectsAsync);
             LoadSchoolsCommand = new AsyncRelayCommand(LoadSchoolsAsync);
             SchoolChangedCommand = new AsyncRelayCommand<string>(OnSchoolChangedAsync);
             GradeChangedCommand = new AsyncRelayCommand<string>(OnGradeChangedAsync);
@@ -71,8 +75,14 @@ namespace Timer.ViewModels
 
             WeakReferenceMessenger.Default.Register<DataReloadRequestedMessage>(this);
 
+            // 初始化下拉框默认值（全部选项）
+            Schools = new ObservableCollection<string> { AllOption };
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
+
             // 初始化时加载数据
-            _ = LoadSchoolsAsync();
+            _ = LoadProjectsAsync();
             _ = LoadScoresAsync();
         }
 
@@ -83,7 +93,7 @@ namespace Timer.ViewModels
             if (message.Value == DataDomain.Participants || message.Value == DataDomain.RaceGroups)
             {
                 _ = LoadScoresAsync();
-                _ = LoadSchoolsAsync();
+                _ = LoadProjectsAsync();
             }
         }
 
@@ -116,19 +126,7 @@ namespace Timer.ViewModels
         public ScoreSearchFilter SearchFilter
         {
             get => _searchFilter;
-            set
-            {
-                if (SetProperty(ref _searchFilter, value))
-                {
-                    if (value != null)
-                    {
-                        _startDate = value.StartDate;
-                        _endDate = value.EndDate;
-                        OnPropertyChanged(nameof(StartDate));
-                        OnPropertyChanged(nameof(EndDate));
-                    }
-                }
-            }
+            set => SetProperty(ref _searchFilter, value);
         }
 
         /// <summary>
@@ -219,6 +217,11 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand RefreshCommand { get; }
 
         /// <summary>
+        /// 加载项目列表命令
+        /// </summary>
+        public IAsyncRelayCommand LoadProjectsCommand { get; }
+
+        /// <summary>
         /// 加载学校列表命令
         /// </summary>
         public IAsyncRelayCommand LoadSchoolsCommand { get; }
@@ -239,31 +242,48 @@ namespace Timer.ViewModels
         public IAsyncRelayCommand<string> ClassChangedCommand { get; }
 
         /// <summary>
-        /// 开始日期
+        /// 项目列表
         /// </summary>
-        public DateTime? StartDate
+        public ObservableCollection<Project> Projects
         {
-            get => _startDate;
-            set
-            {
-                if (SetProperty(ref _startDate, value))
-                {
-                    SearchFilter.StartDate = value;
-                }
-            }
+            get => _projects;
+            set => SetProperty(ref _projects, value);
         }
 
         /// <summary>
-        /// 结束日期
+        /// 选中的项目（用于绑定）
         /// </summary>
-        public DateTime? EndDate
+        public Project? SelectedProject
         {
-            get => _endDate;
+            get => _selectedProjectItem;
             set
             {
-                if (SetProperty(ref _endDate, value))
+                if (SetProperty(ref _selectedProjectItem, value))
                 {
-                    SearchFilter.EndDate = value;
+                    // 更新 SearchFilter 中的 ProjectId
+                    SearchFilter.ProjectId = value?.Id;
+                    
+                    // 重置下级下拉框
+                    SearchFilter.School = null;
+                    SearchFilter.Grade = null;
+                    SearchFilter.Class = null;
+                    SearchFilter.GroupName = null;
+                    
+                    Schools = new ObservableCollection<string> { AllOption };
+                    Grades = new ObservableCollection<string> { AllOption };
+                    Classes = new ObservableCollection<string> { AllOption };
+                    GroupNames = new ObservableCollection<string> { AllOption };
+                    
+                    OnPropertyChanged(nameof(SelectedSchool));
+                    OnPropertyChanged(nameof(SelectedGrade));
+                    OnPropertyChanged(nameof(SelectedClass));
+                    OnPropertyChanged(nameof(SelectedGroup));
+                    
+                    // 加载该项目下的学校列表
+                    if (value != null && value.Id > 0)
+                    {
+                        _ = LoadSchoolsByProjectAsync(value.Id);
+                    }
                 }
             }
         }
@@ -401,8 +421,7 @@ namespace Timer.ViewModels
                         // 获取所有符合条件的数据（不分页）
                         var exportFilter = new ScoreSearchFilter
                         {
-                            StartDate = SearchFilter.StartDate,
-                            EndDate = SearchFilter.EndDate,
+                            ProjectId = SearchFilter.ProjectId,
                             School = SearchFilter.School,
                             Grade = SearchFilter.Grade,
                             Class = SearchFilter.Class,
@@ -476,7 +495,7 @@ namespace Timer.ViewModels
         private void Search()
         {
             _loggingService?.Info("[按钮点击] 成绩管理 - 查询按钮");
-            _loggingService?.Debug($"[查询条件] School={SearchFilter.School}, Grade={SearchFilter.Grade}, Class={SearchFilter.Class}, GroupName={SearchFilter.GroupName}, StartDate={StartDate}, EndDate={EndDate}");
+            _loggingService?.Debug($"[查询条件] ProjectId={SearchFilter.ProjectId}, School={SearchFilter.School}, Grade={SearchFilter.Grade}, Class={SearchFilter.Class}, GroupName={SearchFilter.GroupName}");
             CurrentPage = 1;
             _ = LoadScoresAsync();
         }
@@ -488,13 +507,19 @@ namespace Timer.ViewModels
         {
             _loggingService?.Info("[按钮点击] 成绩管理 - 清除搜索按钮");
             SearchFilter = new ScoreSearchFilter();
-            StartDate = null;
-            EndDate = null;
-            Grades.Clear();
-            Classes.Clear();
-            GroupNames.Clear();
+            _selectedProjectItem = null;
+            OnPropertyChanged(nameof(SelectedProject));
+            // 重置下拉框为只有"全部"选项
+            Schools = new ObservableCollection<string> { AllOption };
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
+            OnPropertyChanged(nameof(SelectedSchool));
+            OnPropertyChanged(nameof(SelectedGrade));
+            OnPropertyChanged(nameof(SelectedClass));
+            OnPropertyChanged(nameof(SelectedGroup));
             CurrentPage = 1;
-            _ = LoadSchoolsAsync();
+            _ = LoadProjectsAsync();
             _ = LoadScoresAsync();
         }
 
@@ -576,7 +601,54 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 加载学校列表
+        /// 加载项目列表
+        /// </summary>
+        private async Task LoadProjectsAsync()
+        {
+            try
+            {
+                var projects = await _projectRepository.GetActiveProjectsAsync();
+                var projectList = new ObservableCollection<Project>();
+                
+                // 添加"全部"选项作为第一项（Id=0 表示全部）
+                projectList.Add(new Project { Id = 0, Name = AllOption });
+                
+                foreach (var project in projects)
+                {
+                    projectList.Add(project);
+                }
+                
+                Projects = projectList;
+                
+                // 默认选择"全部"
+                _selectedProjectItem = projectList.FirstOrDefault(p => p.Id == 0);
+                OnPropertyChanged(nameof(SelectedProject));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载项目列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 根据项目ID加载学校列表
+        /// </summary>
+        private async Task LoadSchoolsByProjectAsync(int projectId)
+        {
+            try
+            {
+                var schools = await _lapRecordRepository.GetScoreSchoolsByProjectAsync(projectId);
+                Schools = AddAllOption(schools);
+                OnPropertyChanged(nameof(SelectedSchool));
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"加载学校列表失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 加载学校列表（所有项目）
         /// </summary>
         private async Task LoadSchoolsAsync()
         {
@@ -617,9 +689,10 @@ namespace Timer.ViewModels
             OnPropertyChanged(nameof(SelectedClass));
             OnPropertyChanged(nameof(SelectedGroup));
 
-            Grades.Clear();
-            Classes.Clear();
-            GroupNames.Clear();
+            // 重置下拉框为只有"全部"选项
+            Grades = new ObservableCollection<string> { AllOption };
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
 
             if (!string.IsNullOrWhiteSpace(school))
             {
@@ -649,8 +722,9 @@ namespace Timer.ViewModels
             OnPropertyChanged(nameof(SelectedClass));
             OnPropertyChanged(nameof(SelectedGroup));
 
-            Classes.Clear();
-            GroupNames.Clear();
+            // 重置下拉框为只有"全部"选项
+            Classes = new ObservableCollection<string> { AllOption };
+            GroupNames = new ObservableCollection<string> { AllOption };
 
             if (!string.IsNullOrWhiteSpace(SearchFilter.School) && !string.IsNullOrWhiteSpace(grade))
             {
@@ -678,7 +752,8 @@ namespace Timer.ViewModels
             OnPropertyChanged(nameof(SelectedClass));
             OnPropertyChanged(nameof(SelectedGroup));
 
-            GroupNames.Clear();
+            // 重置下拉框为只有"全部"选项
+            GroupNames = new ObservableCollection<string> { AllOption };
 
             if (!string.IsNullOrWhiteSpace(SearchFilter.School) && 
                 !string.IsNullOrWhiteSpace(SearchFilter.Grade) && 
