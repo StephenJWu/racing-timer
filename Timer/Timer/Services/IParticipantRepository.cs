@@ -69,11 +69,12 @@ namespace Timer.Services
         Task DeleteByProjectIdAsync(int projectId);
 
         /// <summary>
-        /// 检查准考证号是否已存在
+        /// 检查准考证号是否已存在（在同一项目内）
         /// </summary>
         /// <param name="examNumber">准考证号</param>
+        /// <param name="projectId">项目ID</param>
         /// <returns>如果存在返回true，否则返回false</returns>
-        Task<bool> ExistsByExamNumberAsync(string examNumber);
+        Task<bool> ExistsByExamNumberAsync(string examNumber, int? projectId);
 
         /// <summary>
         /// 检查号码布是否已存在
@@ -83,10 +84,11 @@ namespace Timer.Services
         Task<bool> ExistsByBibNumberAsync(string bibNumber);
 
         /// <summary>
-        /// 获取当前最大序号
+        /// 获取指定项目的最大序号
         /// </summary>
+        /// <param name="projectId">项目ID</param>
         /// <returns>最大序号，如果数据库为空则返回0</returns>
-        Task<int> GetMaxSequenceNumberAsync();
+        Task<int> GetMaxSequenceNumberAsync(int? projectId);
 
         /// <summary>
         /// 开始事务

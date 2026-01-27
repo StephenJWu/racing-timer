@@ -119,9 +119,10 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
-                          Height="400"
+                          Height="442"
                           RowHeight="40"
-                          ColumnHeaderHeight="40">
+                          ColumnHeaderHeight="40"
+                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
                     <!-- 单元格样式：垂直居中，左对齐 -->
                     <DataGrid.CellStyle>
                         <Style TargetType="DataGridCell">
@@ -156,6 +157,14 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="序号" Binding="{Binding SequenceNumber}" Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="TextAlignment" Value="Left"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="比赛日期" Binding="{Binding Date, StringFormat=yyyy-M-d}" Width="120">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">

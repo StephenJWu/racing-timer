@@ -21,7 +21,7 @@ namespace Timer.ViewModels
     /// </summary>
     public class GroupViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
-        private const string AllOption = AllOption;
+        private const string AllOption = "全部";
         
         private readonly IParticipantRepository _participantRepository;
         private readonly IChipRepository _chipRepository;

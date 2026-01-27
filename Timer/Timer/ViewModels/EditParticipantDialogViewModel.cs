@@ -16,6 +16,7 @@ namespace Timer.ViewModels
         private readonly ILoggingService? _loggingService;
         private readonly string? _originalExamNumber;
         private readonly string? _originalBibNumber;
+        private readonly int? _projectId;
 
         private DateTime _date;
         private string? _school;
@@ -39,6 +40,7 @@ namespace Timer.ViewModels
 
             Id = participant.Id;
             SequenceNumber = participant.SequenceNumber;
+            _projectId = participant.ProjectId;
 
             Date = participant.Date;
             School = participant.School;
@@ -226,7 +228,7 @@ namespace Timer.ViewModels
             {
                 try
                 {
-                    if (await _repository.ExistsByExamNumberAsync(exam))
+                    if (await _repository.ExistsByExamNumberAsync(exam, _projectId))
                     {
                         ValidationErrors.Add($"准考证号\"{exam}\"已存在");
                     }

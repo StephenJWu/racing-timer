@@ -136,6 +136,9 @@ namespace Timer.Services
                 // 开始事务
                 await _repository.BeginTransactionAsync();
 
+                // 获取项目ID（从第一个participant获取，因为导入时所有participant应该属于同一个项目）
+                var projectId = participantList.FirstOrDefault()?.ProjectId;
+
                 // 验证序号连续性
                 var sequenceValidation = new ParticipantValidator.ValidationResult { IsValid = true };
                 ParticipantValidator.ValidateSequenceNumberContinuity(participantList, sequenceValidation);
@@ -150,8 +153,8 @@ namespace Timer.Services
                     return result;
                 }
 
-                // 获取当前最大序号
-                var maxSequence = await _repository.GetMaxSequenceNumberAsync();
+                // 获取该项目下的最大序号
+                var maxSequence = await _repository.GetMaxSequenceNumberAsync(projectId);
                 var expectedSequence = maxSequence + 1;
 
                 // 验证序号是否从正确的位置开始

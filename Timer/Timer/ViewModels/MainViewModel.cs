@@ -239,7 +239,10 @@ namespace Timer.ViewModels
             var repository = new ParticipantRepository(_dbContext, _loggingService);
             var excelImportService = new ExcelImportService(repository);
             var projectRepository = new ProjectRepository(_dbContext, _loggingService);
-            return new ParticipantViewModel(repository, excelImportService, projectRepository, _dbContext, _loggingService);
+            var raceGroupRepository = new RaceGroupRepository(_dbContext, _loggingService);
+            var raceRecordRepository = new RaceRecordRepository(_dbContext, _loggingService);
+            var lapRecordRepository = new LapRecordRepository(_dbContext, _loggingService);
+            return new ParticipantViewModel(repository, excelImportService, projectRepository, raceGroupRepository, raceRecordRepository, lapRecordRepository, _dbContext, _loggingService);
         }
 
         /// <summary>

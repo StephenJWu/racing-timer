@@ -379,9 +379,9 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 检查准考证号是否已存在
+        /// 检查准考证号是否已存在（在同一项目内）
         /// </summary>
-        public async Task<bool> ExistsByExamNumberAsync(string examNumber)
+        public async Task<bool> ExistsByExamNumberAsync(string examNumber, int? projectId)
         {
             if (string.IsNullOrWhiteSpace(examNumber))
             {
@@ -391,8 +391,17 @@ namespace Timer.Services
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
-            command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber";
-            command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+            if (projectId.HasValue && projectId.Value > 0)
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber AND ProjectId = @projectId";
+                command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+                command.Parameters.Add(new SqliteParameter("@projectId", projectId.Value));
+            }
+            else
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Participants WHERE ExamNumber = @examNumber";
+                command.Parameters.Add(new SqliteParameter("@examNumber", examNumber));
+            }
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
@@ -419,14 +428,22 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 获取当前最大序号
+        /// 获取指定项目的最大序号
         /// </summary>
-        public async Task<int> GetMaxSequenceNumberAsync()
+        public async Task<int> GetMaxSequenceNumberAsync(int? projectId)
         {
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
-            command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants";
+            if (projectId.HasValue && projectId.Value > 0)
+            {
+                command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants WHERE ProjectId = @ProjectId";
+                command.Parameters.AddWithValue("@ProjectId", projectId.Value);
+            }
+            else
+            {
+                command.CommandText = "SELECT COALESCE(MAX(SequenceNumber), 0) FROM Participants";
+            }
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result);

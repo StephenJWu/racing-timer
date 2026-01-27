@@ -26,6 +26,9 @@ namespace Timer.ViewModels
         private readonly IParticipantRepository _repository;
         private readonly IExcelImportService _excelImportService;
         private readonly IProjectRepository _projectRepository;
+        private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IRaceRecordRepository _raceRecordRepository;
+        private readonly ILapRecordRepository _lapRecordRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
         private bool _disposed;
@@ -57,12 +60,18 @@ namespace Timer.ViewModels
             IParticipantRepository repository,
             IExcelImportService excelImportService,
             IProjectRepository projectRepository,
+            IRaceGroupRepository raceGroupRepository,
+            IRaceRecordRepository raceRecordRepository,
+            ILapRecordRepository lapRecordRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _excelImportService = excelImportService ?? throw new ArgumentNullException(nameof(excelImportService));
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+            _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
+            _lapRecordRepository = lapRecordRepository ?? throw new ArgumentNullException(nameof(lapRecordRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
 
@@ -455,9 +464,21 @@ namespace Timer.ViewModels
                     if (selectedProject == null || string.IsNullOrEmpty(selectedFilePath))
                         return;
 
+                    // 1. 提示会清除这个项目下的所有参赛人员
+                    var confirmResult = MessageBox.Show(
+                        $"导入将清除项目 \"{selectedProject.Name}\" 下的所有参赛人员、人员分组和比赛成绩记录。\n\n是否继续？",
+                        "确认导入",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (confirmResult != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+
                     _loggingService?.Info($"[导入] 开始导入参赛人员, 项目: {selectedProject.Name}, 文件: {selectedFilePath}");
 
-                    // 显示遮罩层
+                    // 2. 打开遮罩层，显示"处理中"
                     IsLoading = true;
                     ImportProgress = 0;
                     ImportResult = null;
@@ -471,10 +492,11 @@ namespace Timer.ViewModels
 
                     try
                     {
-                        // 先删除该项目下的所有参赛人员
-                        await _repository.DeleteByProjectIdAsync(selectedProject.Id);
-                        _loggingService?.Info($"已清空项目 {selectedProject.Name} 的参赛人员数据，准备重新导入");
+                        // 3. 进行数据库清理：清理这个项目下的所有参赛人员、人员分组、项目比赛成绩记录
+                        await CleanupProjectDataAsync(selectedProject.Id);
+                        _loggingService?.Info($"已清空项目 {selectedProject.Name} 的所有相关数据，准备重新导入");
 
+                        // 4. 完成后，进行数据导入
                         // 读取Excel文件
                         var participants = await _excelImportService.ReadFromFileAsync(selectedFilePath);
 
@@ -488,6 +510,11 @@ namespace Timer.ViewModels
                         var progress = new Progress<double>(value => ImportProgress = value);
                         ImportResult = await _excelImportService.ImportAsync(participants, progress);
 
+                        // 5. 导入完成后，关闭遮罩层
+                        IsLoading = false;
+                        await Task.Delay(50);
+
+                        // 6. 提示导入成功、失败数据
                         if (ImportResult.IsSuccess())
                         {
                             resultMessage = $"成功导入{ImportResult.SuccessCount}条记录";
@@ -506,9 +533,8 @@ namespace Timer.ViewModels
                             resultIcon = MessageBoxImage.Warning;
                         }
 
-                        // 刷新列表（使用内部方法，不重置IsLoading）
-                        await LoadParticipantsInternalAsync();
-                        // 刷新筛选项数据源（学校/年级/班级/组别）
+                        // 7. 查询一遍，刷新最新的数据到查询结果表
+                        await LoadParticipantsAsync();
                         await RefreshFilterSourcesAsync();
 
                         // 通知其它页面：人员/分组统计可能变化
@@ -521,12 +547,7 @@ namespace Timer.ViewModels
                         resultMessage = $"导入Excel文件失败: {ex.Message}";
                         resultTitle = "错误";
                         resultIcon = MessageBoxImage.Error;
-                    }
-                    finally
-                    {
-                        // 关闭遮罩层
                         IsLoading = false;
-                        // 让UI有机会刷新关闭遮罩层
                         await Task.Delay(50);
                     }
 
@@ -545,6 +566,61 @@ namespace Timer.ViewModels
                     "错误",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 清理项目相关的所有数据（参赛人员、人员分组、比赛成绩记录）
+        /// </summary>
+        private async Task CleanupProjectDataAsync(int projectId)
+        {
+            try
+            {
+                _loggingService?.Info($"[清理数据] 开始清理项目 ID={projectId} 的所有相关数据");
+                var connection = await _dbContext.GetConnectionAsync();
+
+                // 1. 删除该项目下所有 RaceGroups 关联的 LapRecords（通过 JOIN 删除）
+                var deleteLapRecordsCommand = connection.CreateCommand();
+                deleteLapRecordsCommand.CommandText = @"
+                    DELETE FROM LapRecords 
+                    WHERE RaceRecordId IN (
+                        SELECT rr.Id 
+                        FROM RaceRecords rr
+                        INNER JOIN RaceGroups rg ON rr.RaceGroupId = rg.Id
+                        WHERE rg.ProjectId = @ProjectId
+                    )";
+                deleteLapRecordsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var lapRecordsDeleted = await deleteLapRecordsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {lapRecordsDeleted} 条圈次记录");
+
+                // 2. 删除该项目下所有 RaceGroups 关联的 RaceRecords
+                var deleteRaceRecordsCommand = connection.CreateCommand();
+                deleteRaceRecordsCommand.CommandText = @"
+                    DELETE FROM RaceRecords 
+                    WHERE RaceGroupId IN (
+                        SELECT Id FROM RaceGroups WHERE ProjectId = @ProjectId
+                    )";
+                deleteRaceRecordsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var raceRecordsDeleted = await deleteRaceRecordsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {raceRecordsDeleted} 条比赛记录");
+
+                // 3. 删除该项目下的所有 RaceGroups
+                var deleteRaceGroupsCommand = connection.CreateCommand();
+                deleteRaceGroupsCommand.CommandText = "DELETE FROM RaceGroups WHERE ProjectId = @ProjectId";
+                deleteRaceGroupsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var raceGroupsDeleted = await deleteRaceGroupsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {raceGroupsDeleted} 个比赛分组");
+
+                // 4. 删除该项目下的所有参赛人员
+                await _repository.DeleteByProjectIdAsync(projectId);
+                _loggingService?.Info($"[清理数据] 已删除项目 ID={projectId} 的所有参赛人员");
+
+                _loggingService?.Info($"[清理数据] 项目 ID={projectId} 的所有相关数据清理完成");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"[清理数据] 清理项目数据失败: {ex.Message}", ex);
+                throw;
             }
         }
 
