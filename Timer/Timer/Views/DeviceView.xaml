@@ -3,21 +3,281 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{StaticResource BackgroundBrush}">
     <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding Title}" 
-                           FontSize="32" 
-                           FontWeight="Bold" 
-                           FontStyle="Italic"
-                           HorizontalAlignment="Center"
-                           Foreground="{StaticResource TextColorBrush}"
-                           Margin="0,0,0,16"/>
-                <TextBlock Text="{Binding Message}" 
-                           FontSize="14" 
-                           Foreground="{StaticResource SecondaryTextColorBrush}"
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="3*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：设备控制与状态 -->
+        <StackPanel Grid.Column="0"
+                    Margin="0,0,16,0"
+                    Orientation="Vertical"
+                    VerticalAlignment="Stretch">
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <StackPanel Margin="16">
+                    <TextBlock Text="{Binding Title}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextColorBrush}"
+                               Margin="0,0,0,8"/>
+
+                    <!-- 连接设置 -->
+                    <GroupBox Header="连接设置" Margin="0,0,0,8">
+                        <Grid Margin="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="串口号:"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                            <ComboBox Grid.Row="0" Grid.Column="1"
+                                      ItemsSource="{Binding AvailablePorts}"
+                                      SelectedItem="{Binding SelectedPort}"
+                                      MinWidth="80"
+                                      Margin="0,0,8,4"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="波特率:"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                            <ComboBox Grid.Row="1" Grid.Column="1"
+                                      ItemsSource="{Binding AvailableBaudRates}"
+                                      SelectedItem="{Binding SelectedBaudRate}"
+                                      MinWidth="80"
+                                      Margin="0,0,8,0"/>
+
+                            <StackPanel Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        Orientation="Vertical"
+                                        HorizontalAlignment="Right"
+                                        Margin="8,0">
+                                <Button Content="刷新串口"
+                                        Command="{Binding RefreshPortsCommand}"
+                                        Margin="0,0,0,4"
+                                        MinWidth="90"/>
+                                <Button Content="连接"
+                                        Command="{Binding ConnectCommand}"
+                                        MinWidth="90"
+                                        Style="{StaticResource PrimaryButtonStyle}"/>
+                            </StackPanel>
+
+                            <Button Grid.RowSpan="2"
+                                    Grid.Column="3"
+                                    Content="断开"
+                                    Command="{Binding DisconnectCommand}"
+                                    Margin="8,0,0,0"
+                                    MinWidth="80"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- 设备信息 -->
+                    <GroupBox Header="设备信息" Margin="0,0,0,8">
+                        <Grid Margin="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="固件版本:"
+                                       Margin="0,0,8,4"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                       Text="{Binding FirmwareVersion}"
+                                       Margin="0,0,8,4"
+                                       Foreground="{StaticResource TextColorBrush}"/>
+                            <Button Grid.Row="0" Grid.Column="2"
+                                    Content="读取"
+                                    Command="{Binding ReadFirmwareCommand}"
+                                    MinWidth="72"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="芯片类型:"
+                                       Margin="0,0,8,4"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1"
+                                       Text="{Binding ChipType}"
+                                       Margin="0,0,8,4"
+                                       Foreground="{StaticResource TextColorBrush}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="频段:"
+                                       Margin="0,0,8,0"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1"
+                                       Text="{Binding FrequencyRegion}"
+                                       Margin="0,0,8,0"
+                                       Foreground="{StaticResource TextColorBrush}"/>
+                            <Button Grid.Row="2" Grid.Column="2"
+                                    Content="读取"
+                                    Command="{Binding ReadFrequencyCommand}"
+                                    MinWidth="72"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- 天线设置 -->
+                    <GroupBox Header="工作天线" Margin="0,0,0,8">
+                        <StackPanel Margin="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="选择天线:"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <ComboBox Grid.Column="1"
+                                          SelectedValue="{Binding SelectedAntenna}"
+                                          MinWidth="80">
+                                    <ComboBoxItem Content="天线 1" Tag="1"/>
+                                    <ComboBoxItem Content="天线 2" Tag="2"/>
+                                    <ComboBoxItem Content="天线 3" Tag="3"/>
+                                    <ComboBoxItem Content="天线 4" Tag="4"/>
+                                </ComboBox>
+
+                                <Button Grid.Column="2"
+                                        Content="设置"
+                                        Command="{Binding SetWorkAntennaCommand}"
+                                        Margin="8,0"
+                                        MinWidth="60"/>
+                                <Button Grid.Column="3"
+                                        Content="读取"
+                                        Command="{Binding GetWorkAntennaCommand}"
+                                        MinWidth="60"/>
+                            </Grid>
+                            <TextBlock Margin="0,4,0,0"
+                                       Text="{Binding CurrentAntenna, StringFormat=当前工作天线: {0}}"
+                                       Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- GPIO -->
+                    <GroupBox Header="GPIO" Margin="0,0,0,8">
+                        <StackPanel Margin="8" Orientation="Vertical" >
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="GPIO1:"
+                                           Margin="0,0,8,0"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <TextBlock Text="{Binding Gpio1High}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="GPIO2:"
+                                           Margin="0,0,8,0"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <TextBlock Text="{Binding Gpio2High}"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="GPIO3 输出:"
+                                           Margin="0,0,8,0"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <CheckBox Content="高电平"
+                                          IsChecked="{Binding Gpio3HighToWrite}"
+                                          Margin="0,0,8,0"/>
+                                <Button Content="写入"
+                                        Command="{Binding WriteGpio3Command}"
+                                        MinWidth="80"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="GPIO4 输出:"
+                                           Margin="0,0,8,0"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <CheckBox Content="高电平"
+                                          IsChecked="{Binding Gpio4HighToWrite}"
+                                          Margin="0,0,8,0"/>
+                                <Button Content="写入"
+                                        Command="{Binding WriteGpio4Command}"
+                                        MinWidth="80"/>
+                                <Button Content="读取 GPIO"
+                                        Command="{Binding ReadGpioCommand}"
+                                        Margin="8,0,0,0"
+                                        MinWidth="100"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- 盘存控制 -->
+                    <GroupBox Header="盘存" Margin="0,0,0,0">
+                        <StackPanel Margin="8">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Button Content="开始盘存"
+                                        Command="{Binding StartInventoryCommand}"
+                                        MinWidth="110"
+                                        Style="{StaticResource PrimaryButtonStyle}"/>
+                                <Button Content="停止盘存"
+                                        Command="{Binding StopInventoryCommand}"
+                                        Margin="8,0,0,0"
+                                        MinWidth="110"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="本轮标签数:"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <TextBlock Text="{Binding LastRoundTagCount}"
+                                           Margin="4,0,16,0"
+                                           Foreground="{StaticResource TextColorBrush}"/>
+                                <TextBlock Text="累计标签数:"
+                                           Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                                <TextBlock Text="{Binding TotalTagCount}"
+                                           Margin="4,0,0,0"
+                                           Foreground="{StaticResource TextColorBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- 右侧：通信日志 -->
+        <Border Grid.Column="1"
+                Style="{StaticResource CardStyle}">
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="通信日志"
+                           FontSize="16"
                            FontWeight="Bold"
-                           HorizontalAlignment="Center"/>
-            </StackPanel>
+                           Foreground="{StaticResource TextColorBrush}"
+                           Margin="0,0,0,8"/>
+
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBox Text="{Binding LogText, Mode=OneWay}"
+                             IsReadOnly="True"
+                             TextWrapping="NoWrap"
+                             AcceptsReturn="True"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             FontFamily="Consolas"
+                             Foreground="{StaticResource SecondaryTextColorBrush}"/>
+                </ScrollViewer>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

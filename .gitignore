@@ -12,6 +12,7 @@ installer/
 *.userosscache
 *.sln.docstates
 *.userprefs
+c#/
 
 # Build results
 [Dd]ebug/
