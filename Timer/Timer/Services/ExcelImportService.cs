@@ -108,16 +108,23 @@ namespace Timer.Services
         /// <summary>
         /// 将参赛人员数据导入到数据库
         /// </summary>
+        /// <param name="projectId">项目ID（必须指定，导入会强制写入 Participants.ProjectId）</param>
         /// <param name="participants">要导入的人员列表</param>
         /// <param name="progress">进度报告（0-100）</param>
         /// <returns>导入结果，包含成功数、失败数和详细错误</returns>
         public async Task<ImportResult> ImportAsync(
+            int projectId,
             IEnumerable<Participant> participants,
             IProgress<double>? progress = null)
         {
             if (participants == null)
             {
                 throw new ArgumentNullException(nameof(participants));
+            }
+
+            if (projectId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(projectId), projectId, "projectId 必须是有效的项目ID");
             }
 
             var participantList = participants.ToList();
@@ -136,8 +143,13 @@ namespace Timer.Services
                 // 开始事务
                 await _repository.BeginTransactionAsync();
 
-                // 获取项目ID（从第一个participant获取，因为导入时所有participant应该属于同一个项目）
-                var projectId = participantList.FirstOrDefault()?.ProjectId;
+                // 强制写入 ProjectId，避免出现 NULL
+                foreach (var p in participantList)
+                {
+                    p.ProjectId = projectId;
+                    // 导入阶段不直接写 ParticipantGroupId（由导入后创建/回填）
+                    p.ParticipantGroupId = null;
+                }
 
                 // 验证序号连续性
                 var sequenceValidation = new ParticipantValidator.ValidationResult { IsValid = true };

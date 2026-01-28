@@ -127,7 +127,7 @@ namespace Timer.Services
 
                 // 获取所有现有芯片组，建立字典以便快速查找
                 var existingGroups = (await _repository.GetAllChipGroupsAsync()).ToList();
-                var groupNameToIdMap = existingGroups.ToDictionary(g => g.GroupName, g => g.Id, StringComparer.OrdinalIgnoreCase);
+                var groupNameToIdMap = existingGroups.ToDictionary(g => g.ChipGroupName, g => g.Id, StringComparer.OrdinalIgnoreCase);
                 var createdGroupsMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase); // 本次导入中创建的组
                 var seenLabelNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // 用于检查LabelNumber唯一性
 
@@ -158,7 +158,7 @@ namespace Timer.Services
                         // 创建新芯片组
                         var newGroup = new ChipGroup
                         {
-                            GroupName = groupName,
+                            ChipGroupName = groupName,
                             Color = DefaultChipGroupColor,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now

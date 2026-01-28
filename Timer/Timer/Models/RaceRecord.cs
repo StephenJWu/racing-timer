@@ -8,6 +8,11 @@ namespace Timer.Models
     public enum RaceStatus
     {
         /// <summary>
+        /// 待开始
+        /// </summary>
+        Pending,
+        
+        /// <summary>
         /// 比赛进行中
         /// </summary>
         Running,
@@ -29,7 +34,7 @@ namespace Timer.Models
     }
 
     /// <summary>
-    /// 表示一场比赛的记录，包含比赛的整体信息
+    /// 表示一个参赛人员的比赛记录
     /// </summary>
     public class RaceRecord
     {
@@ -44,24 +49,69 @@ namespace Timer.Models
         public int RaceGroupId { get; set; }
 
         /// <summary>
-        /// 比赛开始时间
+        /// 关联的项目ID（外键关联Projects）
         /// </summary>
-        public DateTime StartTime { get; set; }
+        public int ProjectId { get; set; }
 
         /// <summary>
-        /// 比赛结束时间（可为空，比赛进行中时为null）
+        /// 序号
         /// </summary>
-        public DateTime? EndTime { get; set; }
+        public int SequenceNumber { get; set; }
+
+        /// <summary>
+        /// 学校名称
+        /// </summary>
+        public string School { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 年级
+        /// </summary>
+        public string? Grade { get; set; }
+
+        /// <summary>
+        /// 班级
+        /// </summary>
+        public string? Class { get; set; }
+
+        /// <summary>
+        /// 组别名称
+        /// </summary>
+        public string GroupName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 芯片外部号码（号码布）
+        /// </summary>
+        public string? LabelNumber { get; set; }
+
+        /// <summary>
+        /// 姓名
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 性别
+        /// </summary>
+        public string Gender { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 1圈计时（格式：HH:mm:ss.fff）
+        /// </summary>
+        public string Lap1Time { get; set; } = "00:00:00.000";
+
+        /// <summary>
+        /// 2圈计时（格式：HH:mm:ss.fff）
+        /// </summary>
+        public string Lap2Time { get; set; } = "00:00:00.000";
+
+        /// <summary>
+        /// 总计时（格式：HH:mm:ss.fff）
+        /// </summary>
+        public string TotalTime { get; set; } = "00:00:00.000";
 
         /// <summary>
         /// 比赛状态
         /// </summary>
-        public RaceStatus Status { get; set; }
-
-        /// <summary>
-        /// 比赛总圈数
-        /// </summary>
-        public int TotalLaps { get; set; }
+        public RaceStatus Status { get; set; } = RaceStatus.Pending;
 
         /// <summary>
         /// 创建时间
@@ -69,14 +119,9 @@ namespace Timer.Models
         public DateTime CreatedAt { get; set; }
 
         /// <summary>
-        /// 比赛分组信息（非持久化属性，用于UI显示）
+        /// 更新时间
         /// </summary>
-        public RaceGroup? RaceGroup { get; set; }
-
-        /// <summary>
-        /// 参赛人数（非持久化属性，用于UI显示）
-        /// </summary>
-        public int ParticipantCount { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }
 

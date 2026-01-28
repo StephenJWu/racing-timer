@@ -24,11 +24,11 @@ namespace Timer.Services
         Task<Participant?> GetByIdAsync(int id);
 
         /// <summary>
-        /// 根据号码布编号获取参赛人员
+        /// 根据芯片外部号码获取参赛人员
         /// </summary>
-        /// <param name="bibNumber">号码布编号</param>
+        /// <param name="labelNumber">芯片外部号码</param>
         /// <returns>人员对象，如果不存在则返回null</returns>
-        Task<Participant?> GetByBibNumberAsync(string bibNumber);
+        Task<Participant?> GetByLabelNumberAsync(string labelNumber);
 
         /// <summary>
         /// 获取符合条件的总记录数（用于分页计算）
@@ -77,11 +77,11 @@ namespace Timer.Services
         Task<bool> ExistsByExamNumberAsync(string examNumber, int? projectId);
 
         /// <summary>
-        /// 检查号码布是否已存在
+        /// 检查芯片外部号码是否已存在
         /// </summary>
-        /// <param name="bibNumber">号码布编号</param>
+        /// <param name="labelNumber">芯片外部号码</param>
         /// <returns>如果存在返回true，否则返回false</returns>
-        Task<bool> ExistsByBibNumberAsync(string bibNumber);
+        Task<bool> ExistsByLabelNumberAsync(string labelNumber);
 
         /// <summary>
         /// 获取指定项目的最大序号

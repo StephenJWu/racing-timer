@@ -92,16 +92,16 @@
                          Text="{Binding GroupName, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource FormTextBoxStyle}"/>
 
-                <!-- 号码布 -->
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="号码布" Style="{StaticResource FormLabelGridStyle}"/>
+                <!-- 芯片外部号码 -->
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="芯片外部号码" Style="{StaticResource FormLabelGridStyle}"/>
                 <TextBox Grid.Row="8" Grid.Column="1"
-                         Text="{Binding BibNumber, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding LabelNumber, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource FormTextBoxStyle}"/>
 
-                <!-- 芯片编号 -->
-                <TextBlock Grid.Row="9" Grid.Column="0" Text="芯片编号" Style="{StaticResource FormLabelGridStyle}"/>
+                <!-- 芯片内部号码 -->
+                <TextBlock Grid.Row="9" Grid.Column="0" Text="芯片内部号码" Style="{StaticResource FormLabelGridStyle}"/>
                 <TextBox Grid.Row="9" Grid.Column="1"
-                         Text="{Binding ChipNumber, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding InternalNumber, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource FormTextBoxStyle}"/>
             </Grid>
         </ScrollViewer>

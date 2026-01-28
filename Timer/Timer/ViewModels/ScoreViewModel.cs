@@ -22,7 +22,7 @@ namespace Timer.ViewModels
     {
         private const string AllOption = "全部";
         
-        private readonly ILapRecordRepository _lapRecordRepository;
+        private readonly IRaceRecordRepository _raceRecordRepository;
         private readonly IProjectRepository _projectRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
@@ -50,12 +50,12 @@ namespace Timer.ViewModels
         /// 初始化ScoreViewModel实例
         /// </summary>
         public ScoreViewModel(
-            ILapRecordRepository lapRecordRepository,
+            IRaceRecordRepository raceRecordRepository,
             IProjectRepository projectRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
-            _lapRecordRepository = lapRecordRepository ?? throw new ArgumentNullException(nameof(lapRecordRepository));
+            _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
@@ -430,7 +430,7 @@ namespace Timer.ViewModels
                             PageNumber = 1
                         };
 
-                        var dataList = await _lapRecordRepository.SearchScoresAsync(exportFilter);
+                        var dataList = await _raceRecordRepository.SearchScoresAsync(exportFilter);
 
                         // 使用ClosedXML导出Excel
                         using var workbook = new XLWorkbook();
@@ -456,7 +456,7 @@ namespace Timer.ViewModels
                             worksheet.Cell(row, 6).Value = item.Name;
                             worksheet.Cell(row, 7).Value = item.Gender;
                             worksheet.Cell(row, 8).Value = item.ExamNumber;
-                            worksheet.Cell(row, 9).Value = item.BibNumber;
+                            worksheet.Cell(row, 9).Value = item.LabelNumber;
                             worksheet.Cell(row, 10).Value = item.TotalLaps;
                             worksheet.Cell(row, 11).Value = item.TotalTimeFormatted;
                             row++;
@@ -569,8 +569,8 @@ namespace Timer.ViewModels
                 await Task.Delay(50);
 
                 SearchFilter.PageNumber = CurrentPage;
-                var scores = await _lapRecordRepository.SearchScoresAsync(SearchFilter);
-                var totalCount = await _lapRecordRepository.GetScoresTotalCountAsync(SearchFilter);
+                var scores = await _raceRecordRepository.SearchScoresAsync(SearchFilter);
+                var totalCount = await _raceRecordRepository.GetScoresTotalCountAsync(SearchFilter);
 
                 Scores = new ObservableCollection<ScoreResult>(scores);
                 TotalCount = totalCount;
@@ -637,7 +637,7 @@ namespace Timer.ViewModels
         {
             try
             {
-                var schools = await _lapRecordRepository.GetScoreSchoolsByProjectAsync(projectId);
+                var schools = await _raceRecordRepository.GetScoreSchoolsByProjectAsync(projectId);
                 Schools = AddAllOption(schools);
                 OnPropertyChanged(nameof(SelectedSchool));
             }
@@ -655,7 +655,7 @@ namespace Timer.ViewModels
             try
             {
                 var currentSchool = SearchFilter.School;
-                var schools = await _lapRecordRepository.GetScoreSchoolsAsync();
+                var schools = await _raceRecordRepository.GetScoreSchoolsAsync();
                 Schools = AddAllOption(schools);
 
                 if (!string.IsNullOrWhiteSpace(currentSchool) && schools.Contains(currentSchool))
@@ -698,7 +698,7 @@ namespace Timer.ViewModels
             {
                 try
                 {
-                    var grades = await _lapRecordRepository.GetScoreGradesAsync(school);
+                    var grades = await _raceRecordRepository.GetScoreGradesAsync(school);
                     Grades = AddAllOption(grades);
                     SearchFilter.Grade = null;
                     OnPropertyChanged(nameof(SelectedGrade));
@@ -730,7 +730,7 @@ namespace Timer.ViewModels
             {
                 try
                 {
-                    var classes = await _lapRecordRepository.GetScoreClassesAsync(SearchFilter.School, grade);
+                    var classes = await _raceRecordRepository.GetScoreClassesAsync(SearchFilter.School, grade);
                     Classes = AddAllOption(classes);
                     SearchFilter.Class = null;
                     OnPropertyChanged(nameof(SelectedClass));
@@ -761,7 +761,7 @@ namespace Timer.ViewModels
             {
                 try
                 {
-                    var groupNames = await _lapRecordRepository.GetScoreGroupNamesAsync(
+                    var groupNames = await _raceRecordRepository.GetScoreGroupNamesAsync(
                         SearchFilter.School, SearchFilter.Grade, classValue);
                     GroupNames = AddAllOption(groupNames);
                     SearchFilter.GroupName = null;

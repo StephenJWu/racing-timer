@@ -49,7 +49,7 @@ namespace Timer.Views
                 // 更新数据库
                 var updated = _vm.ToChipGroup();
                 await _repository.UpdateChipGroupAsync(updated);
-                _loggingService?.Info($"成功更新芯片组: {updated.GroupName} (ID: {updated.Id})");
+                _loggingService?.Info($"成功更新芯片组: {updated.ChipGroupName} (ID: {updated.Id})");
 
                 // 广播更新消息，供其他页面实时刷新（人员分组/计时等）
                 WeakReferenceMessenger.Default.Send(new ChipGroupUpdatedMessage(updated));

@@ -272,7 +272,7 @@ namespace Timer.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    _loggingService?.Info($"芯片组已更新: {group.GroupName}");
+                    _loggingService?.Info($"芯片组已更新: {group.ChipGroupName}");
                     // 刷新列表
                     await LoadChipGroupsAsync();
                     // 通知其它页面：芯片组列表/分组列表可能需要刷新（批量/引用场景）
@@ -295,7 +295,7 @@ namespace Timer.ViewModels
             if (group == null) return;
 
             var result = MessageBox.Show(
-                $"确定要删除芯片组 \"{group.GroupName}\" 吗？\n\n此操作将同时删除该组下的所有芯片（共 {group.ChipCount} 个），且无法恢复。",
+                $"确定要删除芯片组 \"{group.ChipGroupName}\" 吗？\n\n此操作将同时删除该组下的所有芯片（共 {group.ChipCount} 个），且无法恢复。",
                 "确认删除",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -306,7 +306,7 @@ namespace Timer.ViewModels
                 {
                     IsLoading = true;
                     await _repository.DeleteChipGroupAsync(group.Id);
-                    _loggingService?.Info($"删除芯片组成功: {group.GroupName}");
+                    _loggingService?.Info($"删除芯片组成功: {group.ChipGroupName}");
                     
                     // 如果删除的是当前选中的组，清空选中
                     if (SelectedChipGroup?.Id == group.Id)
@@ -319,7 +319,7 @@ namespace Timer.ViewModels
                     WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.ChipGroups));
                     WeakReferenceMessenger.Default.Send(new DataReloadRequestedMessage(DataDomain.RaceGroups));
                     
-                    MessageBox.Show($"芯片组 \"{group.GroupName}\" 已删除", "删除成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"芯片组 \"{group.ChipGroupName}\" 已删除", "删除成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {

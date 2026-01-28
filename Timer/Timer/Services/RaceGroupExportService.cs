@@ -79,8 +79,8 @@ namespace Timer.Services
                         worksheet.Cell(currentRow, 7).Value = participant.Name;
                         worksheet.Cell(currentRow, 8).Value = participant.Gender;
                         worksheet.Cell(currentRow, 9).Value = participant.ExamNumber ?? "";
-                        worksheet.Cell(currentRow, 10).Value = participant.ChipNumber ?? "";
-                        worksheet.Cell(currentRow, 11).Value = participant.ChipInternalNumber ?? "";
+                        worksheet.Cell(currentRow, 10).Value = participant.LabelNumber ?? "";
+                        worksheet.Cell(currentRow, 11).Value = participant.InternalNumber ?? "";
 
                         currentRow++;
                     }

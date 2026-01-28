@@ -1,30 +1,25 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Timer.Models
 {
     /// <summary>
-    /// 表示一个比赛分组，包含学校、年级、班级、组别和芯片分配信息
+    /// 参赛人员分组配置模型
     /// </summary>
-    public partial class RaceGroup : ObservableObject
+    public partial class ParticipantGroup : ObservableObject
     {
         /// <summary>
-        /// 数据库主键
+        /// 主键ID
         /// </summary>
         [ObservableProperty]
         private int _id;
 
         /// <summary>
-        /// 关联的项目ID（外键关联Projects）
+        /// 项目ID（外键关联Projects）
         /// </summary>
         [ObservableProperty]
         private int? _projectId;
-
-        /// <summary>
-        /// 项目名称（非持久化属性，用于UI显示）
-        /// </summary>
-        [ObservableProperty]
-        private string? _projectName;
 
         /// <summary>
         /// 学校名称
@@ -51,28 +46,22 @@ namespace Timer.Models
         private string _groupName = string.Empty;
 
         /// <summary>
+        /// 比赛圈数
+        /// </summary>
+        [ObservableProperty]
+        private int _raceLaps = 1;
+
+        /// <summary>
         /// 关联的芯片组ID（外键关联ChipGroups）
         /// </summary>
         [ObservableProperty]
         private int? _chipGroupId;
 
         /// <summary>
-        /// 参赛人数
+        /// 芯片组名称（冗余字段，便于查询）
         /// </summary>
         [ObservableProperty]
-        private int _participantCount;
-
-        /// <summary>
-        /// 比赛圈数（1-20）
-        /// </summary>
-        [ObservableProperty]
-        private int _raceLaps = 1;
-
-        /// <summary>
-        /// 比赛状态
-        /// </summary>
-        [ObservableProperty]
-        private RaceStatus _status = RaceStatus.Pending;
+        private string? _chipGroupName;
 
         /// <summary>
         /// 创建时间
@@ -87,23 +76,27 @@ namespace Timer.Models
         private DateTime _updatedAt;
 
         /// <summary>
-        /// 芯片组名称（持久化属性）
+        /// 显示名称（用于UI显示）
         /// </summary>
-        [ObservableProperty]
-        private string? _chipGroupName;
-
-        /// <summary>
-        /// 芯片组颜色（非持久化属性，用于UI显示）
-        /// </summary>
-        [ObservableProperty]
-        private string? _chipGroupColor;
-
-        /// <summary>
-        /// 显示名称：学校-年级-班级-组名（用于UI显示）
-        /// </summary>
-        public string DisplayName => $"{School}-{Grade}-{Class}-{GroupName}";
+        public string DisplayName
+        {
+            get
+            {
+                var parts = new List<string> { School };
+                if (!string.IsNullOrWhiteSpace(Grade))
+                {
+                    parts.Add(Grade);
+                }
+                if (!string.IsNullOrWhiteSpace(Class))
+                {
+                    parts.Add(Class);
+                }
+                if (!string.IsNullOrWhiteSpace(GroupName))
+                {
+                    parts.Add(GroupName);
+                }
+                return string.Join(" - ", parts);
+            }
+        }
     }
 }
-
-
-

@@ -19,10 +19,12 @@ namespace Timer.Services
         /// <summary>
         /// 将参赛人员数据导入到数据库
         /// </summary>
+        /// <param name="projectId">项目ID（必须指定，导入会强制写入 Participants.ProjectId）</param>
         /// <param name="participants">要导入的人员列表</param>
         /// <param name="progress">进度报告（0-100）</param>
         /// <returns>导入结果，包含成功数、失败数和详细错误</returns>
         Task<ImportResult> ImportAsync(
+            int projectId,
             IEnumerable<Participant> participants,
             IProgress<double>? progress = null
         );

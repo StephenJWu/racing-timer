@@ -18,7 +18,7 @@ namespace Timer.Models
         /// 芯片组名称，唯一
         /// </summary>
         [ObservableProperty]
-        private string _groupName = string.Empty;
+        private string _chipGroupName = string.Empty;
 
         /// <summary>
         /// 芯片组颜色（存储为ARGB十六进制字符串，如"#FF1890FF"）

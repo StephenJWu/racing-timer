@@ -57,7 +57,7 @@ namespace Timer.Services
         /// <param name="raceRecordId">比赛记录ID</param>
         /// <param name="participantId">参赛者ID</param>
         /// <param name="passTime">通过时间</param>
-        Task<LapRecord> RecordLapAsync(int raceRecordId, int participantId, DateTime passTime);
+        Task RecordLapAsync(int raceRecordId, int participantId, DateTime passTime);
 
         /// <summary>
         /// 获取参赛者当前已完成圈数
@@ -85,11 +85,6 @@ namespace Timer.Services
         /// </summary>
         Task<List<RaceRecord>> LoadActiveRacesAsync();
 
-        /// <summary>
-        /// 获取指定比赛的圈次记录
-        /// </summary>
-        /// <param name="raceRecordId">比赛记录ID</param>
-        Task<List<LapRecord>> GetLapRecordsAsync(int raceRecordId);
 
         #region 兼容旧接口（单比赛模式）
 
@@ -133,7 +128,7 @@ namespace Timer.Services
         /// 记录圈次（兼容旧接口）
         /// </summary>
         [Obsolete("请使用 RecordLapAsync(int raceRecordId, int participantId, DateTime passTime)")]
-        Task<LapRecord> RecordLapAsync(int participantId, DateTime passTime);
+        Task RecordLapAsync(int participantId, DateTime passTime);
 
         /// <summary>
         /// 获取参赛者当前圈数（兼容旧接口）

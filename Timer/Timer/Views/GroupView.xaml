@@ -333,7 +333,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="芯片标签号码" Binding="{Binding ChipNumber}" Width="150">
+                        <DataGridTextColumn Header="芯片标签号码" Binding="{Binding LabelNumber}" Width="150">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>

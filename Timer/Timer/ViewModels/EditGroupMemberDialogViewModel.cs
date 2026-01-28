@@ -22,8 +22,8 @@ namespace Timer.ViewModels
             AvailableChips = availableChips ?? new ObservableCollection<Chip>();
 
             // 初始化当前值
-            _chipLabelNumber = participant.ChipNumber;
-            _chipInternalNumber = participant.ChipInternalNumber;
+            _chipLabelNumber = participant.LabelNumber;
+            _chipInternalNumber = participant.InternalNumber ?? participant.ChipInternalNumber;
 
             SaveCommand = new RelayCommand(Save);
             CancelCommand = new RelayCommand(Cancel);
@@ -70,10 +70,10 @@ namespace Timer.ViewModels
         private void Save()
         {
             // 更新参赛人员的芯片信息
-            _participant.ChipNumber = ChipLabelNumber;
+            _participant.LabelNumber = ChipLabelNumber;
+            _participant.InternalNumber = ChipInternalNumber;
+            // UI 兼容显示字段
             _participant.ChipInternalNumber = ChipInternalNumber;
-            // 业务约定：号码布 = 芯片标签号码（与自动分配芯片逻辑保持一致）
-            _participant.BibNumber = ChipLabelNumber;
 
             DialogResult = true;
             RequestClose?.Invoke(this, EventArgs.Empty);

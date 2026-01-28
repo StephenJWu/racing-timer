@@ -32,7 +32,7 @@
                             <Rectangle Width="16" Height="16" 
                                        Fill="{Binding Color, Converter={StaticResource HexColorToBrushConverter}}" 
                                        Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding GroupName}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ChipGroupName}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>

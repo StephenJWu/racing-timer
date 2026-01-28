@@ -61,7 +61,7 @@ namespace Timer.Services
 
             if (!string.IsNullOrWhiteSpace(filter.SearchKeyword))
             {
-                whereClauses.Add("(Name LIKE @searchKeyword OR ExamNumber LIKE @searchKeyword OR BibNumber LIKE @searchKeyword)");
+                whereClauses.Add("(Name LIKE @searchKeyword OR ExamNumber LIKE @searchKeyword OR LabelNumber LIKE @searchKeyword)");
                 parameters.Add(new SqliteParameter("@searchKeyword", $"%{filter.SearchKeyword}%"));
             }
 
@@ -106,7 +106,7 @@ namespace Timer.Services
 
             // 构建SQL查询
             command.CommandText = $@"
-                SELECT Id, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt
+                SELECT Id, ProjectId, ParticipantGroupId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, LabelNumber, InternalNumber, CreatedAt, UpdatedAt
                 FROM Participants
                 {whereClause}
                 ORDER BY SequenceNumber
@@ -142,7 +142,7 @@ namespace Timer.Services
             var command = connection.CreateCommand();
 
             command.CommandText = @"
-                SELECT Id, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt
+                SELECT Id, ProjectId, ParticipantGroupId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, LabelNumber, InternalNumber, CreatedAt, UpdatedAt
                 FROM Participants
                 WHERE Id = @id
             ";
@@ -159,25 +159,25 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 根据号码布编号获取参赛人员
+        /// 根据芯片外部号码获取参赛人员
         /// </summary>
-        public async Task<Participant?> GetByBibNumberAsync(string bibNumber)
+        public async Task<Participant?> GetByLabelNumberAsync(string labelNumber)
         {
-            if (string.IsNullOrWhiteSpace(bibNumber))
+            if (string.IsNullOrWhiteSpace(labelNumber))
             {
-                throw new ArgumentNullException(nameof(bibNumber));
+                throw new ArgumentNullException(nameof(labelNumber));
             }
 
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
             command.CommandText = @"
-                SELECT Id, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt
+                SELECT Id, ProjectId, ParticipantGroupId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, LabelNumber, InternalNumber, CreatedAt, UpdatedAt
                 FROM Participants
-                WHERE BibNumber = @bibNumber
+                WHERE LabelNumber = @labelNumber
             ";
 
-            command.Parameters.Add(new SqliteParameter("@bibNumber", bibNumber));
+            command.Parameters.Add(new SqliteParameter("@labelNumber", labelNumber));
 
             using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -202,7 +202,7 @@ namespace Timer.Services
 
             if (!string.IsNullOrWhiteSpace(filter.SearchKeyword))
             {
-                whereClauses.Add("(Name LIKE @searchKeyword OR ExamNumber LIKE @searchKeyword OR BibNumber LIKE @searchKeyword)");
+                whereClauses.Add("(Name LIKE @searchKeyword OR ExamNumber LIKE @searchKeyword OR LabelNumber LIKE @searchKeyword)");
                 parameters.Add(new SqliteParameter("@searchKeyword", $"%{filter.SearchKeyword}%"));
             }
 
@@ -269,8 +269,8 @@ namespace Timer.Services
             var command = connection.CreateCommand();
 
             command.CommandText = @"
-                INSERT INTO Participants (ProjectId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, BibNumber, ChipNumber, CreatedAt, UpdatedAt)
-                VALUES (@projectId, @sequenceNumber, @date, @school, @grade, @class, @name, @gender, @examNumber, @groupName, @bibNumber, @chipNumber, @createdAt, @updatedAt);
+                INSERT INTO Participants (ProjectId, ParticipantGroupId, SequenceNumber, Date, School, Grade, Class, Name, Gender, ExamNumber, GroupName, LabelNumber, InternalNumber, CreatedAt, UpdatedAt)
+                VALUES (@projectId, @participantGroupId, @sequenceNumber, @date, @school, @grade, @class, @name, @gender, @examNumber, @groupName, @labelNumber, @internalNumber, @createdAt, @updatedAt);
                 SELECT last_insert_rowid();
             ";
 
@@ -302,9 +302,9 @@ namespace Timer.Services
 
             command.CommandText = @"
                 UPDATE Participants
-                SET ProjectId = @projectId, SequenceNumber = @sequenceNumber, Date = @date, School = @school, Grade = @grade, Class = @class,
+                SET ProjectId = @projectId, ParticipantGroupId = @participantGroupId, SequenceNumber = @sequenceNumber, Date = @date, School = @school, Grade = @grade, Class = @class,
                     Name = @name, Gender = @gender, ExamNumber = @examNumber, GroupName = @groupName,
-                    BibNumber = @bibNumber, ChipNumber = @chipNumber, UpdatedAt = @updatedAt
+                    LabelNumber = @labelNumber, InternalNumber = @internalNumber, UpdatedAt = @updatedAt
                 WHERE Id = @id
             ";
 
@@ -408,20 +408,20 @@ namespace Timer.Services
         }
 
         /// <summary>
-        /// 检查号码布是否已存在
+        /// 检查芯片外部号码是否已存在
         /// </summary>
-        public async Task<bool> ExistsByBibNumberAsync(string bibNumber)
+        public async Task<bool> ExistsByLabelNumberAsync(string labelNumber)
         {
-            if (string.IsNullOrWhiteSpace(bibNumber))
+            if (string.IsNullOrWhiteSpace(labelNumber))
             {
-                throw new ArgumentNullException(nameof(bibNumber));
+                throw new ArgumentNullException(nameof(labelNumber));
             }
 
             var connection = await _dbContext.GetConnectionAsync();
             var command = connection.CreateCommand();
 
-            command.CommandText = "SELECT COUNT(*) FROM Participants WHERE BibNumber = @bibNumber";
-            command.Parameters.Add(new SqliteParameter("@bibNumber", bibNumber));
+            command.CommandText = "SELECT COUNT(*) FROM Participants WHERE LabelNumber = @labelNumber";
+            command.Parameters.Add(new SqliteParameter("@labelNumber", labelNumber));
 
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
@@ -490,6 +490,7 @@ namespace Timer.Services
         private void AddParticipantParameters(SqliteCommand command, Participant participant)
         {
             command.Parameters.Add(new SqliteParameter("@projectId", participant.ProjectId.HasValue ? participant.ProjectId.Value : (object)DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@participantGroupId", participant.ParticipantGroupId.HasValue ? participant.ParticipantGroupId.Value : (object)DBNull.Value));
             command.Parameters.Add(new SqliteParameter("@sequenceNumber", participant.SequenceNumber));
             command.Parameters.Add(new SqliteParameter("@date", participant.Date.ToString("yyyy-MM-dd HH:mm:ss")));
             command.Parameters.Add(new SqliteParameter("@school", participant.School ?? (object)DBNull.Value));
@@ -499,8 +500,8 @@ namespace Timer.Services
             command.Parameters.Add(new SqliteParameter("@gender", participant.Gender));
             command.Parameters.Add(new SqliteParameter("@examNumber", participant.ExamNumber ?? (object)DBNull.Value));
             command.Parameters.Add(new SqliteParameter("@groupName", participant.GroupName ?? (object)DBNull.Value));
-            command.Parameters.Add(new SqliteParameter("@bibNumber", participant.BibNumber ?? (object)DBNull.Value));
-            command.Parameters.Add(new SqliteParameter("@chipNumber", participant.ChipNumber ?? (object)DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@labelNumber", participant.LabelNumber ?? (object)DBNull.Value));
+            command.Parameters.Add(new SqliteParameter("@internalNumber", participant.InternalNumber ?? (object)DBNull.Value));
         }
 
         /// <summary>
@@ -676,6 +677,8 @@ namespace Timer.Services
             return new Participant
             {
                 Id = reader.GetInt32("Id"),
+                ProjectId = reader.IsDBNull("ProjectId") ? null : reader.GetInt32("ProjectId"),
+                ParticipantGroupId = reader.IsDBNull("ParticipantGroupId") ? null : reader.GetInt32("ParticipantGroupId"),
                 SequenceNumber = reader.GetInt32("SequenceNumber"),
                 Date = DateTime.Parse(reader.GetString("Date")),
                 School = reader.IsDBNull("School") ? null : reader.GetString("School"),
@@ -685,8 +688,8 @@ namespace Timer.Services
                 Gender = reader.GetString("Gender"),
                 ExamNumber = reader.IsDBNull("ExamNumber") ? null : reader.GetString("ExamNumber"),
                 GroupName = reader.IsDBNull("GroupName") ? null : reader.GetString("GroupName"),
-                BibNumber = reader.IsDBNull("BibNumber") ? null : reader.GetString("BibNumber"),
-                ChipNumber = reader.IsDBNull("ChipNumber") ? null : reader.GetString("ChipNumber"),
+                LabelNumber = reader.IsDBNull("LabelNumber") ? null : reader.GetString("LabelNumber"),
+                InternalNumber = reader.IsDBNull("InternalNumber") ? null : reader.GetString("InternalNumber"),
                 CreatedAt = DateTime.Parse(reader.GetString("CreatedAt")),
                 UpdatedAt = DateTime.Parse(reader.GetString("UpdatedAt"))
             };

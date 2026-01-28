@@ -20,19 +20,14 @@ namespace Timer.Services
         Task<List<RaceRecord>> GetAllAsync();
 
         /// <summary>
-        /// 根据比赛分组ID获取比赛记录列表
+        /// 根据比赛分组ID获取比赛记录列表（该分组下所有参赛人员的记录）
         /// </summary>
         Task<List<RaceRecord>> GetByRaceGroupIdAsync(int raceGroupId);
 
         /// <summary>
-        /// 获取当前正在进行的比赛记录（状态为Running或Paused）
+        /// 批量创建比赛记录
         /// </summary>
-        Task<RaceRecord?> GetActiveRaceAsync();
-
-        /// <summary>
-        /// 获取所有正在进行的比赛记录（状态为Running或Paused）
-        /// </summary>
-        Task<List<RaceRecord>> GetActiveRacesAsync();
+        Task<int> CreateBatchAsync(IEnumerable<RaceRecord> raceRecords);
 
         /// <summary>
         /// 创建比赛记录
@@ -48,6 +43,46 @@ namespace Timer.Services
         /// 删除比赛记录
         /// </summary>
         Task<bool> DeleteAsync(int id);
+
+        /// <summary>
+        /// 根据比赛分组ID删除所有比赛记录
+        /// </summary>
+        Task<bool> DeleteByRaceGroupIdAsync(int raceGroupId);
+
+        /// <summary>
+        /// 查询成绩结果（从 RaceRecords 表查询）
+        /// </summary>
+        Task<List<ScoreResult>> SearchScoresAsync(ScoreSearchFilter filter);
+
+        /// <summary>
+        /// 获取成绩查询的总记录数
+        /// </summary>
+        Task<int> GetScoresTotalCountAsync(ScoreSearchFilter filter);
+
+        /// <summary>
+        /// 获取成绩查询中所有学校列表
+        /// </summary>
+        Task<List<string>> GetScoreSchoolsAsync();
+
+        /// <summary>
+        /// 根据项目ID获取成绩查询中的学校列表
+        /// </summary>
+        Task<List<string>> GetScoreSchoolsByProjectAsync(int projectId);
+
+        /// <summary>
+        /// 获取指定学校下的年级列表
+        /// </summary>
+        Task<List<string>> GetScoreGradesAsync(string school);
+
+        /// <summary>
+        /// 获取指定学校和年级下的班级列表
+        /// </summary>
+        Task<List<string>> GetScoreClassesAsync(string school, string grade);
+
+        /// <summary>
+        /// 获取指定学校、年级、班级下的组别列表
+        /// </summary>
+        Task<List<string>> GetScoreGroupNamesAsync(string school, string grade, string className);
     }
 }
 
