@@ -60,7 +60,7 @@ namespace Timer.Models
         /// <summary>
         /// 芯片外部号码（号码布）
         /// </summary>
-        public string? BibNumber { get; set; }
+        public string? LabelNumber { get; set; }
 
         /// <summary>
         /// 完成圈数

@@ -87,16 +87,39 @@ namespace Timer.Services
         /// <summary>
         /// 获取分组内的所有参赛人员
         /// </summary>
+        /// <param name="projectId">项目ID（可选，如果提供则只查询该项目下的人员）</param>
         /// <param name="school">学校</param>
         /// <param name="grade">年级</param>
         /// <param name="classValue">班级</param>
         /// <param name="groupName">组别</param>
         /// <returns>参赛人员列表</returns>
         Task<IEnumerable<Participant>> GetParticipantsByGroupAsync(
+            int? projectId,
             string school,
             string? grade,
             string? classValue,
             string groupName);
+
+        /// <summary>
+        /// 创建比赛分组
+        /// </summary>
+        /// <param name="raceGroup">比赛分组对象</param>
+        /// <returns>创建的分组ID</returns>
+        Task<int> CreateAsync(RaceGroup raceGroup);
+
+        /// <summary>
+        /// 更新比赛分组
+        /// </summary>
+        /// <param name="raceGroup">比赛分组对象</param>
+        /// <returns>是否更新成功</returns>
+        Task<bool> UpdateAsync(RaceGroup raceGroup);
+
+        /// <summary>
+        /// 删除比赛分组
+        /// </summary>
+        /// <param name="id">分组ID</param>
+        /// <returns>是否删除成功</returns>
+        Task<bool> DeleteAsync(int id);
     }
 }
 

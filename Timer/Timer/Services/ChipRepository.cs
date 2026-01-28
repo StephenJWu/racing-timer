@@ -58,15 +58,15 @@ namespace Timer.Services
             command.CommandText = @"
                 SELECT 
                     cg.Id,
-                    cg.GroupName,
+                    cg.ChipGroupName,
                     cg.Color,
                     cg.CreatedAt,
                     cg.UpdatedAt,
                     COALESCE(COUNT(c.Id), 0) as ChipCount
                 FROM ChipGroups cg
                 LEFT JOIN Chips c ON cg.Id = c.ChipGroupId
-                GROUP BY cg.Id, cg.GroupName, cg.Color, cg.CreatedAt, cg.UpdatedAt
-                ORDER BY cg.GroupName
+                GROUP BY cg.Id, cg.ChipGroupName, cg.Color, cg.CreatedAt, cg.UpdatedAt
+                ORDER BY cg.ChipGroupName
             ";
 
             LogSql("GetAllChipGroupsAsync", command.CommandText);
@@ -93,7 +93,7 @@ namespace Timer.Services
             command.CommandText = @"
                 SELECT 
                     Id,
-                    GroupName,
+                    ChipGroupName,
                     Color,
                     CreatedAt,
                     UpdatedAt
@@ -161,12 +161,12 @@ namespace Timer.Services
             var command = connection.CreateCommand();
 
             command.CommandText = @"
-                INSERT INTO ChipGroups (GroupName, Color, CreatedAt, UpdatedAt)
-                VALUES (@groupName, @color, @createdAt, @updatedAt);
+                INSERT INTO ChipGroups (ChipGroupName, Color, CreatedAt, UpdatedAt)
+                VALUES (@chipGroupName, @color, @createdAt, @updatedAt);
                 SELECT last_insert_rowid();
             ";
 
-            command.Parameters.Add(new SqliteParameter("@groupName", group.GroupName));
+            command.Parameters.Add(new SqliteParameter("@chipGroupName", group.ChipGroupName));
             command.Parameters.Add(new SqliteParameter("@color", group.Color));
             command.Parameters.Add(new SqliteParameter("@createdAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
             command.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
@@ -195,12 +195,12 @@ namespace Timer.Services
 
             command.CommandText = @"
                 UPDATE ChipGroups
-                SET GroupName = @groupName, Color = @color, UpdatedAt = @updatedAt
+                SET ChipGroupName = @chipGroupName, Color = @color, UpdatedAt = @updatedAt
                 WHERE Id = @id
             ";
 
             command.Parameters.Add(new SqliteParameter("@id", group.Id));
-            command.Parameters.Add(new SqliteParameter("@groupName", group.GroupName));
+            command.Parameters.Add(new SqliteParameter("@chipGroupName", group.ChipGroupName));
             command.Parameters.Add(new SqliteParameter("@color", group.Color));
             command.Parameters.Add(new SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
 
@@ -362,28 +362,28 @@ namespace Timer.Services
                 var connection = await _dbContext.GetConnectionAsync();
                 
                 // 按外键依赖顺序删除数据：
-                // LapRecords -> RaceRecords -> RaceGroups -> Chips -> ChipGroups
+                // RaceRecords -> RaceGroups -> ParticipantGroups -> Chips -> ChipGroups
                 
-                // 1. 删除所有圈次记录
-                var deleteLapRecordsCommand = connection.CreateCommand();
-                deleteLapRecordsCommand.CommandText = "DELETE FROM LapRecords";
-                LogSql("DeleteAllChipGroupsAndChipsAsync", deleteLapRecordsCommand.CommandText);
-                var lapRecordsDeleted = await deleteLapRecordsCommand.ExecuteNonQueryAsync();
-                _loggingService?.Debug($"[SQL] DELETE FROM LapRecords, 删除 {lapRecordsDeleted} 条记录");
-                
-                // 2. 删除所有比赛记录
+                // 1. 删除所有比赛记录
                 var deleteRaceRecordsCommand = connection.CreateCommand();
                 deleteRaceRecordsCommand.CommandText = "DELETE FROM RaceRecords";
                 LogSql("DeleteAllChipGroupsAndChipsAsync", deleteRaceRecordsCommand.CommandText);
                 var raceRecordsDeleted = await deleteRaceRecordsCommand.ExecuteNonQueryAsync();
                 _loggingService?.Debug($"[SQL] DELETE FROM RaceRecords, 删除 {raceRecordsDeleted} 条记录");
                 
-                // 3. 删除所有比赛分组
+                // 2. 删除所有比赛分组
                 var deleteRaceGroupsCommand = connection.CreateCommand();
                 deleteRaceGroupsCommand.CommandText = "DELETE FROM RaceGroups";
                 LogSql("DeleteAllChipGroupsAndChipsAsync", deleteRaceGroupsCommand.CommandText);
                 var raceGroupsDeleted = await deleteRaceGroupsCommand.ExecuteNonQueryAsync();
                 _loggingService?.Debug($"[SQL] DELETE FROM RaceGroups, 删除 {raceGroupsDeleted} 条记录");
+                
+                // 3. 删除所有人员分组配置
+                var deleteParticipantGroupsCommand = connection.CreateCommand();
+                deleteParticipantGroupsCommand.CommandText = "DELETE FROM ParticipantGroups";
+                LogSql("DeleteAllChipGroupsAndChipsAsync", deleteParticipantGroupsCommand.CommandText);
+                var participantGroupsDeleted = await deleteParticipantGroupsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Debug($"[SQL] DELETE FROM ParticipantGroups, 删除 {participantGroupsDeleted} 条记录");
                 
                 // 4. 删除所有芯片
                 var deleteChipsCommand = connection.CreateCommand();
@@ -399,7 +399,7 @@ namespace Timer.Services
                 var groupsDeleted = await deleteGroupsCommand.ExecuteNonQueryAsync();
                 _loggingService?.Debug($"[SQL] DELETE FROM ChipGroups, 删除 {groupsDeleted} 条记录");
                 
-                _loggingService?.Info($"[数据清空] 完成，共删除: LapRecords={lapRecordsDeleted}, RaceRecords={raceRecordsDeleted}, RaceGroups={raceGroupsDeleted}, Chips={chipsDeleted}, ChipGroups={groupsDeleted}");
+                _loggingService?.Info($"[数据清空] 完成，共删除: RaceRecords={raceRecordsDeleted}, RaceGroups={raceGroupsDeleted}, ParticipantGroups={participantGroupsDeleted}, Chips={chipsDeleted}, ChipGroups={groupsDeleted}");
             }
             catch (Exception ex)
             {
@@ -451,7 +451,7 @@ namespace Timer.Services
             return new ChipGroup
             {
                 Id = reader.GetInt32("Id"),
-                GroupName = reader.GetString("GroupName"),
+                ChipGroupName = reader.GetString("ChipGroupName"),
                 Color = reader.GetString("Color"),
                 CreatedAt = DateTime.Parse(reader.GetString("CreatedAt")),
                 UpdatedAt = DateTime.Parse(reader.GetString("UpdatedAt")),
@@ -467,7 +467,7 @@ namespace Timer.Services
             return new ChipGroup
             {
                 Id = reader.GetInt32("Id"),
-                GroupName = reader.GetString("GroupName"),
+                ChipGroupName = reader.GetString("ChipGroupName"),
                 Color = reader.GetString("Color"),
                 CreatedAt = DateTime.Parse(reader.GetString("CreatedAt")),
                 UpdatedAt = DateTime.Parse(reader.GetString("UpdatedAt"))

@@ -102,7 +102,7 @@
                         
                         <!-- 组名 -->
                         <DataGridTextColumn Header="组名" 
-                                            Binding="{Binding GroupName}" 
+                                            Binding="{Binding ChipGroupName}" 
                                             Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
@@ -198,7 +198,7 @@
                                    VerticalAlignment="Center"
                                    Visibility="{Binding SelectedChipGroup, Converter={StaticResource NullToVisibilityConverter}}">
                             <TextBlock.Text>
-                                <Binding Path="SelectedChipGroup.GroupName" StringFormat=" ({0})"/>
+                                <Binding Path="SelectedChipGroup.ChipGroupName" StringFormat=" ({0})"/>
                             </TextBlock.Text>
                         </TextBlock>
                     </StackPanel>

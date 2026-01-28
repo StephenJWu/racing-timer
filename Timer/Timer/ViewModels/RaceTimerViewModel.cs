@@ -21,6 +21,7 @@ namespace Timer.ViewModels
     public partial class RaceTimerViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IRaceRecordRepository _raceRecordRepository;
         private readonly IParticipantRepository _participantRepository;
         private readonly ITimerService _timerService;
         private readonly DatabaseContext _dbContext;
@@ -103,11 +104,13 @@ namespace Timer.ViewModels
 
         public RaceTimerViewModel(
             IRaceGroupRepository raceGroupRepository,
+            IRaceRecordRepository raceRecordRepository,
             IParticipantRepository participantRepository,
             ITimerService timerService,
             DatabaseContext dbContext)
         {
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
             _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
@@ -150,13 +153,13 @@ namespace Timer.ViewModels
 
             foreach (var rg in RaceGroups.Where(r => r.ChipGroupId == updated.Id))
             {
-                rg.ChipGroupName = updated.GroupName;
+                rg.ChipGroupName = updated.ChipGroupName;
                 rg.ChipGroupColor = updated.Color;
             }
 
             if (SelectedRaceGroup?.ChipGroupId == updated.Id)
             {
-                SelectedRaceGroup.ChipGroupName = updated.GroupName;
+                SelectedRaceGroup.ChipGroupName = updated.ChipGroupName;
                 SelectedRaceGroup.ChipGroupColor = updated.Color;
             }
         }
@@ -268,9 +271,9 @@ namespace Timer.ViewModels
                     {
                         ParticipantId = participant.Id,
                         Rank = 0,
-                        BibNumber = participant.BibNumber ?? "-",
+                        LabelNumber = participant.LabelNumber ?? "-",
                         Name = participant.Name,
-                        ChipNumber = participant.ChipNumber,
+                        InternalNumber = participant.InternalNumber,
                         CurrentLap = 0,
                         TotalTime = TimeSpan.Zero,
                         LastLapTime = null,
@@ -310,7 +313,7 @@ namespace Timer.ViewModels
             {
                 // 启动比赛
                 var race = await _timerService.StartRaceAsync(SelectedRaceGroup.Id, TotalLaps);
-                _raceStartTime = race.StartTime;
+                _raceStartTime = DateTime.Now; // 新架构中不再从 race.StartTime 获取，使用当前时间
                 
                 CurrentStatus = RaceStatus.Running;
                 IsRaceActive = true;
@@ -406,17 +409,43 @@ namespace Timer.ViewModels
                 }
 
                 // 记录圈次
-                var lapRecord = await _timerService.RecordLapAsync(participant.ParticipantId, DateTime.Now);
+                await _timerService.RecordLapAsync(participant.ParticipantId, DateTime.Now);
                 
-                // 更新UI显示
-                participant.CurrentLap = lapRecord.LapNumber;
-                participant.TotalTime = TimeSpan.FromMilliseconds(lapRecord.TotalTime);
-                participant.LastLapTime = TimeSpan.FromMilliseconds(lapRecord.LapTime);
-                participant.Rank = lapRecord.Rank ?? 0;
-                
-                // 添加本圈用时到列表
-                participant.LapTimes.Add(TimeSpan.FromMilliseconds(lapRecord.LapTime));
-                participant.NotifyAllLapsChanged();
+                // 重新加载记录以获取最新数据
+                // 注意：在新架构中，需要通过其他方式获取更新后的数据
+                // 这里简化处理，从 RaceRecord 中获取信息
+                var raceRecord = await _raceRecordRepository.GetByIdAsync(participant.RaceRecordId);
+                if (raceRecord != null)
+                {
+                    // 计算当前圈数
+                    int currentLap = 0;
+                    if (!string.IsNullOrWhiteSpace(raceRecord.Lap2Time) && raceRecord.Lap2Time != "00:00:00.000")
+                        currentLap = 2;
+                    else if (!string.IsNullOrWhiteSpace(raceRecord.Lap1Time) && raceRecord.Lap1Time != "00:00:00.000")
+                        currentLap = 1;
+                    
+                    participant.CurrentLap = currentLap;
+                    participant.TotalTime = ParseTimeString(raceRecord.TotalTime);
+                    
+                    // 计算最后一圈时间
+                    if (currentLap == 1)
+                        participant.LastLapTime = ParseTimeString(raceRecord.Lap1Time);
+                    else if (currentLap == 2)
+                        participant.LastLapTime = ParseTimeString(raceRecord.Lap2Time);
+                    
+                    // 添加本圈用时到列表
+                    if (participant.LastLapTime.HasValue)
+                        participant.LapTimes.Add(participant.LastLapTime.Value);
+                    participant.NotifyAllLapsChanged();
+                    
+                    // 计算排名
+                    var allRecords = await _raceRecordRepository.GetByRaceGroupIdAsync(raceRecord.RaceGroupId);
+                    var sortedRecords = allRecords
+                        .Where(r => !string.IsNullOrWhiteSpace(r.TotalTime) && r.TotalTime != "00:00:00.000")
+                        .OrderBy(r => ParseTimeString(r.TotalTime))
+                        .ToList();
+                    participant.Rank = sortedRecords.FindIndex(r => r.Id == raceRecord.Id) + 1;
+                }
 
                 // 检查是否完成比赛
                 if (participant.CurrentLap >= TotalLaps)
@@ -448,14 +477,14 @@ namespace Timer.ViewModels
             {
                 var input = QuickLapInput.Trim();
                 
-                // 根据号码布（芯片标签号码）查找参赛者
+                // 根据芯片外部号码/内部号码查找参赛者
                 var participant = ParticipantTimings.FirstOrDefault(p => 
-                    p.BibNumber == input || 
-                    p.ChipNumber == input);
+                    p.LabelNumber == input || 
+                    p.InternalNumber == input);
 
                 if (participant == null)
                 {
-                    MessageBox.Show($"未找到号码布为 '{input}' 的参赛者", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show($"未找到芯片外部号码/内部号码为 '{input}' 的参赛者", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -518,12 +547,18 @@ namespace Timer.ViewModels
                 {
                     SelectedRaceGroup = raceGroup;
                     await OnRaceGroupSelectedAsync();
+                    
+                    // 从 RaceGroup 获取 TotalLaps（新架构中 RaceRecord 不再有 TotalLaps 字段）
+                    TotalLaps = raceGroup.RaceLaps;
+                }
+                else
+                {
+                    TotalLaps = 1; // 默认值
                 }
 
-                _raceStartTime = activeRace.StartTime;
+                _raceStartTime = DateTime.Now; // 新架构中不再从 activeRace.StartTime 获取，使用当前时间
                 CurrentStatus = activeRace.Status;
                 IsRaceActive = (activeRace.Status == RaceStatus.Running || activeRace.Status == RaceStatus.Paused);
-                TotalLaps = activeRace.TotalLaps;
 
                 // TODO: 恢复参赛者的圈次记录
                 // 这里可以从数据库加载已有的圈次记录并更新UI
@@ -589,6 +624,37 @@ namespace Timer.ViewModels
                     StatusColor = "#94a3b8";
                     break;
             }
+        }
+
+        /// <summary>
+        /// 解析时间字符串（格式：HH:mm:ss.fff）为 TimeSpan
+        /// </summary>
+        private TimeSpan ParseTimeString(string timeString)
+        {
+            if (string.IsNullOrWhiteSpace(timeString) || timeString == "00:00:00.000")
+            {
+                return TimeSpan.Zero;
+            }
+
+            try
+            {
+                var parts = timeString.Split(':');
+                if (parts.Length == 3)
+                {
+                    var hours = int.Parse(parts[0]);
+                    var minutes = int.Parse(parts[1]);
+                    var secondsAndMs = parts[2].Split('.');
+                    var seconds = int.Parse(secondsAndMs[0]);
+                    var milliseconds = secondsAndMs.Length > 1 ? int.Parse(secondsAndMs[1]) : 0;
+                    return new TimeSpan(0, hours, minutes, seconds, milliseconds);
+                }
+            }
+            catch
+            {
+                // 解析失败，返回零
+            }
+
+            return TimeSpan.Zero;
         }
 
         public void Dispose()

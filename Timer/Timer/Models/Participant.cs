@@ -18,6 +18,11 @@ namespace Timer.Models
         public int? ProjectId { get; set; }
 
         /// <summary>
+        /// 关联的人员分组ID（外键关联ParticipantGroups）
+        /// </summary>
+        public int? ParticipantGroupId { get; set; }
+
+        /// <summary>
         /// 序号，必须从1开始连续
         /// </summary>
         public int SequenceNumber { get; set; }
@@ -63,14 +68,14 @@ namespace Timer.Models
         public string? GroupName { get; set; }
 
         /// <summary>
-        /// 号码布编号（可选，后续分配）
+        /// 芯片外部号码（可选，后续分配）
         /// </summary>
-        public string? BibNumber { get; set; }
+        public string? LabelNumber { get; set; }
 
         /// <summary>
-        /// 芯片编号（可选，后续分配）
+        /// 芯片内部号码（可选，后续分配）
         /// </summary>
-        public string? ChipNumber { get; set; }
+        public string? InternalNumber { get; set; }
 
         /// <summary>
         /// 创建时间

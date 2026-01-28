@@ -39,8 +39,8 @@ namespace Timer.ViewModels
             _loggingService = loggingService;
 
             Id = chipGroup.Id;
-            _originalGroupName = chipGroup.GroupName;
-            GroupName = chipGroup.GroupName;
+            _originalGroupName = chipGroup.ChipGroupName;
+            GroupName = chipGroup.ChipGroupName;
 
             // 初始化预定义颜色列表
             PredefinedColors = new ObservableCollection<ColorItem>
@@ -111,7 +111,7 @@ namespace Timer.ViewModels
             return new ChipGroup
             {
                 Id = Id,
-                GroupName = GroupName?.Trim() ?? string.Empty,
+                ChipGroupName = GroupName?.Trim() ?? string.Empty,
                 Color = SelectedColor?.HexColor ?? "#FF1890FF",
                 UpdatedAt = DateTime.Now
             };
@@ -137,7 +137,7 @@ namespace Timer.ViewModels
                 try
                 {
                     var allGroups = await _repository.GetAllChipGroupsAsync();
-                    if (allGroups.Any(g => g.GroupName.Equals(newName, StringComparison.OrdinalIgnoreCase) && g.Id != Id))
+                    if (allGroups.Any(g => g.ChipGroupName.Equals(newName, StringComparison.OrdinalIgnoreCase) && g.Id != Id))
                     {
                         ValidationErrors.Add($"芯片组名称\"{newName}\"已存在");
                     }

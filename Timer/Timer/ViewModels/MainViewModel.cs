@@ -241,8 +241,8 @@ namespace Timer.ViewModels
             var projectRepository = new ProjectRepository(_dbContext, _loggingService);
             var raceGroupRepository = new RaceGroupRepository(_dbContext, _loggingService);
             var raceRecordRepository = new RaceRecordRepository(_dbContext, _loggingService);
-            var lapRecordRepository = new LapRecordRepository(_dbContext, _loggingService);
-            return new ParticipantViewModel(repository, excelImportService, projectRepository, raceGroupRepository, raceRecordRepository, lapRecordRepository, _dbContext, _loggingService);
+            var participantGroupRepository = new ParticipantGroupRepository(_dbContext, _loggingService);
+            return new ParticipantViewModel(repository, excelImportService, projectRepository, raceGroupRepository, raceRecordRepository, participantGroupRepository, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -265,9 +265,10 @@ namespace Timer.ViewModels
             var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
             var chipRepo = new ChipRepository(_dbContext, _loggingService);
             var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
+            var participantGroupRepo = new ParticipantGroupRepository(_dbContext, _loggingService);
             var projectRepo = new ProjectRepository(_dbContext, _loggingService);
             var exportService = new RaceGroupExportService();
-            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, projectRepo, exportService, _loggingService);
+            return new GroupViewModel(participantRepo, chipRepo, raceGroupRepo, participantGroupRepo, projectRepo, exportService, _loggingService);
         }
 
         /// <summary>
@@ -286,9 +287,9 @@ namespace Timer.ViewModels
         private ScoreViewModel CreateScoreViewModel()
         {
             _loggingService.Debug("创建 ScoreViewModel");
-            var lapRecordRepository = new LapRecordRepository(_dbContext, _loggingService);
+            var raceRecordRepository = new RaceRecordRepository(_dbContext, _loggingService);
             var projectRepository = new ProjectRepository(_dbContext, _loggingService);
-            return new ScoreViewModel(lapRecordRepository, projectRepository, _dbContext, _loggingService);
+            return new ScoreViewModel(raceRecordRepository, projectRepository, _dbContext, _loggingService);
         }
 
         /// <summary>
@@ -298,11 +299,10 @@ namespace Timer.ViewModels
         {
             _loggingService.Debug("创建 RaceTimerViewModel");
             var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
-            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
             var raceRecordRepo = new RaceRecordRepository(_dbContext, _loggingService);
-            var lapRecordRepo = new LapRecordRepository(_dbContext, _loggingService);
-            var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
-            return new RaceTimerViewModel(raceGroupRepo, participantRepo, timerService, _dbContext);
+            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var timerService = new TimerService(raceRecordRepo, raceGroupRepo);
+            return new RaceTimerViewModel(raceGroupRepo, raceRecordRepo, participantRepo, timerService, _dbContext);
         }
 
         /// <summary>
@@ -312,12 +312,13 @@ namespace Timer.ViewModels
         {
             _loggingService.Debug("创建 MultiRaceTimerViewModel");
             var raceGroupRepo = new RaceGroupRepository(_dbContext, _loggingService);
-            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
-            var projectRepo = new ProjectRepository(_dbContext, _loggingService);
             var raceRecordRepo = new RaceRecordRepository(_dbContext, _loggingService);
-            var lapRecordRepo = new LapRecordRepository(_dbContext, _loggingService);
-            var timerService = new TimerService(raceRecordRepo, lapRecordRepo);
-            return new MultiRaceTimerViewModel(raceGroupRepo, participantRepo, projectRepo, timerService, _loggingService);
+            var participantRepo = new ParticipantRepository(_dbContext, _loggingService);
+            var participantGroupRepo = new ParticipantGroupRepository(_dbContext, _loggingService);
+            var projectRepo = new ProjectRepository(_dbContext, _loggingService);
+            var chipRepo = new ChipRepository(_dbContext, _loggingService);
+            var timerService = new TimerService(raceRecordRepo, raceGroupRepo);
+            return new MultiRaceTimerViewModel(raceGroupRepo, raceRecordRepo, participantRepo, participantGroupRepo, projectRepo, chipRepo, timerService, _loggingService);
         }
 
         /// <summary>

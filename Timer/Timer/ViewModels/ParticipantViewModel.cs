@@ -28,7 +28,7 @@ namespace Timer.ViewModels
         private readonly IProjectRepository _projectRepository;
         private readonly IRaceGroupRepository _raceGroupRepository;
         private readonly IRaceRecordRepository _raceRecordRepository;
-        private readonly ILapRecordRepository _lapRecordRepository;
+        private readonly IParticipantGroupRepository _participantGroupRepository;
         private readonly ILoggingService? _loggingService;
         private readonly DatabaseContext _dbContext;
         private bool _disposed;
@@ -62,7 +62,7 @@ namespace Timer.ViewModels
             IProjectRepository projectRepository,
             IRaceGroupRepository raceGroupRepository,
             IRaceRecordRepository raceRecordRepository,
-            ILapRecordRepository lapRecordRepository,
+            IParticipantGroupRepository participantGroupRepository,
             DatabaseContext dbContext,
             ILoggingService? loggingService = null)
         {
@@ -71,7 +71,7 @@ namespace Timer.ViewModels
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
             _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
-            _lapRecordRepository = lapRecordRepository ?? throw new ArgumentNullException(nameof(lapRecordRepository));
+            _participantGroupRepository = participantGroupRepository ?? throw new ArgumentNullException(nameof(participantGroupRepository));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _loggingService = loggingService;
 
@@ -498,7 +498,7 @@ namespace Timer.ViewModels
 
                         // 4. 完成后，进行数据导入
                         // 读取Excel文件
-                        var participants = await _excelImportService.ReadFromFileAsync(selectedFilePath);
+                        var participants = (await _excelImportService.ReadFromFileAsync(selectedFilePath)).ToList();
 
                         // 设置 ProjectId
                         foreach (var participant in participants)
@@ -508,13 +508,28 @@ namespace Timer.ViewModels
 
                         // 导入到数据库
                         var progress = new Progress<double>(value => ImportProgress = value);
-                        ImportResult = await _excelImportService.ImportAsync(participants, progress);
+                        ImportResult = await _excelImportService.ImportAsync(selectedProject.Id, participants, progress);
 
-                        // 5. 导入完成后，关闭遮罩层
+                        // 5. 导入成功后，按组别创建 ParticipantGroups 并回填 ParticipantGroupId
+                        if (ImportResult.IsSuccess() && ImportResult.SuccessCount > 0)
+                        {
+                            // 重新从数据库加载已导入的 participants（获取数据库生成的 ID）
+                            var searchFilter = new SearchFilter
+                            {
+                                ProjectId = selectedProject.Id,
+                                PageNumber = 1,
+                                PageSize = 10000 // 足够大的数量以获取所有导入的记录
+                            };
+                            var importedParticipants = (await _repository.GetAllAsync(searchFilter)).ToList();
+                            
+                            await CreateParticipantGroupsFromImportedDataAsync(importedParticipants, selectedProject.Id);
+                        }
+
+                        // 6. 导入完成后，关闭遮罩层
                         IsLoading = false;
                         await Task.Delay(50);
 
-                        // 6. 提示导入成功、失败数据
+                        // 7. 提示导入成功、失败数据
                         if (ImportResult.IsSuccess())
                         {
                             resultMessage = $"成功导入{ImportResult.SuccessCount}条记录";
@@ -533,7 +548,7 @@ namespace Timer.ViewModels
                             resultIcon = MessageBoxImage.Warning;
                         }
 
-                        // 7. 查询一遍，刷新最新的数据到查询结果表
+                        // 8. 查询一遍，刷新最新的数据到查询结果表
                         await LoadParticipantsAsync();
                         await RefreshFilterSourcesAsync();
 
@@ -570,6 +585,108 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
+        /// 根据导入的参赛人员数据，按组别创建 ParticipantGroups，并回填 Participants.ParticipantGroupId
+        /// </summary>
+        private async Task CreateParticipantGroupsFromImportedDataAsync(IEnumerable<Participant> participants, int projectId)
+        {
+            try
+            {
+                _loggingService?.Info($"[创建分组] 开始为项目 ID={projectId} 创建人员分组配置并回填 ParticipantGroupId");
+                
+                // 按组别分组（School, Grade, Class, GroupName）
+                var groupedParticipants = participants
+                    .Where(p => !string.IsNullOrWhiteSpace(p.School) && !string.IsNullOrWhiteSpace(p.GroupName))
+                    .GroupBy(p => new
+                    {
+                        School = p.School,
+                        Grade = p.Grade ?? string.Empty,
+                        Class = p.Class ?? string.Empty,
+                        GroupName = p.GroupName
+                    })
+                    .ToList();
+
+                int createdCount = 0;
+                int existingCount = 0;
+                var groupIdMap = new Dictionary<string, int>(); // Key: "School|Grade|Class|GroupName", Value: ParticipantGroupId
+
+                foreach (var group in groupedParticipants)
+                {
+                    try
+                    {
+                        // 使用 GetOrCreateAsync 获取或创建分组（默认 RaceLaps=1, ChipGroupId=null, ChipGroupName=null）
+                        var participantGroup = await _participantGroupRepository.GetOrCreateAsync(
+                            projectId,
+                            group.Key.School,
+                            string.IsNullOrWhiteSpace(group.Key.Grade) ? null : group.Key.Grade,
+                            string.IsNullOrWhiteSpace(group.Key.Class) ? null : group.Key.Class,
+                            group.Key.GroupName);
+
+                        var groupKey = $"{group.Key.School}|{group.Key.Grade}|{group.Key.Class}|{group.Key.GroupName}";
+                        groupIdMap[groupKey] = participantGroup.Id;
+
+                        if (await _participantGroupRepository.GetByGroupInfoAsync(
+                            projectId,
+                            group.Key.School,
+                            string.IsNullOrWhiteSpace(group.Key.Grade) ? null : group.Key.Grade,
+                            string.IsNullOrWhiteSpace(group.Key.Class) ? null : group.Key.Class,
+                            group.Key.GroupName) == null)
+                        {
+                            createdCount++;
+                            _loggingService?.Debug($"[创建分组] 创建新分组: {participantGroup.DisplayName} (ID: {participantGroup.Id})");
+                        }
+                        else
+                        {
+                            existingCount++;
+                            _loggingService?.Debug($"[创建分组] 分组已存在: {participantGroup.DisplayName} (ID: {participantGroup.Id})");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Error($"[创建分组] 创建分组失败: School={group.Key.School}, Grade={group.Key.Grade}, Class={group.Key.Class}, GroupName={group.Key.GroupName}, Error={ex.Message}", ex);
+                    }
+                }
+
+                _loggingService?.Info($"[创建分组] 完成，新建 {createdCount} 个分组，已存在 {existingCount} 个分组");
+
+                // 回填 Participants.ParticipantGroupId（批量更新以提高性能）
+                int backfilledCount = 0;
+                var connection = await _dbContext.GetConnectionAsync();
+                var updateCommand = connection.CreateCommand();
+                updateCommand.CommandText = @"
+                    UPDATE Participants
+                    SET ParticipantGroupId = @participantGroupId, UpdatedAt = @updatedAt
+                    WHERE Id = @id
+                ";
+                var participantGroupIdParam = new Microsoft.Data.Sqlite.SqliteParameter("@participantGroupId", 0);
+                var updatedAtParam = new Microsoft.Data.Sqlite.SqliteParameter("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                var idParam = new Microsoft.Data.Sqlite.SqliteParameter("@id", 0);
+                updateCommand.Parameters.Add(participantGroupIdParam);
+                updateCommand.Parameters.Add(updatedAtParam);
+                updateCommand.Parameters.Add(idParam);
+
+                foreach (var participant in participants.Where(p => p.Id > 0 && !string.IsNullOrWhiteSpace(p.School) && !string.IsNullOrWhiteSpace(p.GroupName)))
+                {
+                    var groupKey = $"{participant.School}|{participant.Grade ?? string.Empty}|{participant.Class ?? string.Empty}|{participant.GroupName}";
+                    if (groupIdMap.TryGetValue(groupKey, out var participantGroupId))
+                    {
+                        participantGroupIdParam.Value = participantGroupId;
+                        idParam.Value = participant.Id;
+                        await updateCommand.ExecuteNonQueryAsync();
+                        participant.ParticipantGroupId = participantGroupId;
+                        backfilledCount++;
+                    }
+                }
+
+                _loggingService?.Info($"[回填ParticipantGroupId] 完成，回填 {backfilledCount} 条参赛人员记录");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"[创建分组] 创建人员分组配置失败: {ex.Message}", ex);
+                // 不抛出异常，允许导入继续
+            }
+        }
+
+        /// <summary>
         /// 清理项目相关的所有数据（参赛人员、人员分组、比赛成绩记录）
         /// </summary>
         private async Task CleanupProjectDataAsync(int projectId)
@@ -579,21 +696,7 @@ namespace Timer.ViewModels
                 _loggingService?.Info($"[清理数据] 开始清理项目 ID={projectId} 的所有相关数据");
                 var connection = await _dbContext.GetConnectionAsync();
 
-                // 1. 删除该项目下所有 RaceGroups 关联的 LapRecords（通过 JOIN 删除）
-                var deleteLapRecordsCommand = connection.CreateCommand();
-                deleteLapRecordsCommand.CommandText = @"
-                    DELETE FROM LapRecords 
-                    WHERE RaceRecordId IN (
-                        SELECT rr.Id 
-                        FROM RaceRecords rr
-                        INNER JOIN RaceGroups rg ON rr.RaceGroupId = rg.Id
-                        WHERE rg.ProjectId = @ProjectId
-                    )";
-                deleteLapRecordsCommand.Parameters.AddWithValue("@ProjectId", projectId);
-                var lapRecordsDeleted = await deleteLapRecordsCommand.ExecuteNonQueryAsync();
-                _loggingService?.Info($"[清理数据] 已删除 {lapRecordsDeleted} 条圈次记录");
-
-                // 2. 删除该项目下所有 RaceGroups 关联的 RaceRecords
+                // 1. 删除该项目下所有 RaceGroups 关联的 RaceRecords
                 var deleteRaceRecordsCommand = connection.CreateCommand();
                 deleteRaceRecordsCommand.CommandText = @"
                     DELETE FROM RaceRecords 
@@ -604,12 +707,19 @@ namespace Timer.ViewModels
                 var raceRecordsDeleted = await deleteRaceRecordsCommand.ExecuteNonQueryAsync();
                 _loggingService?.Info($"[清理数据] 已删除 {raceRecordsDeleted} 条比赛记录");
 
-                // 3. 删除该项目下的所有 RaceGroups
+                // 2. 删除该项目下的所有 RaceGroups
                 var deleteRaceGroupsCommand = connection.CreateCommand();
                 deleteRaceGroupsCommand.CommandText = "DELETE FROM RaceGroups WHERE ProjectId = @ProjectId";
                 deleteRaceGroupsCommand.Parameters.AddWithValue("@ProjectId", projectId);
                 var raceGroupsDeleted = await deleteRaceGroupsCommand.ExecuteNonQueryAsync();
                 _loggingService?.Info($"[清理数据] 已删除 {raceGroupsDeleted} 个比赛分组");
+
+                // 3. 删除该项目下的所有 ParticipantGroups
+                var deleteParticipantGroupsCommand = connection.CreateCommand();
+                deleteParticipantGroupsCommand.CommandText = "DELETE FROM ParticipantGroups WHERE ProjectId = @ProjectId";
+                deleteParticipantGroupsCommand.Parameters.AddWithValue("@ProjectId", projectId);
+                var participantGroupsDeleted = await deleteParticipantGroupsCommand.ExecuteNonQueryAsync();
+                _loggingService?.Info($"[清理数据] 已删除 {participantGroupsDeleted} 个人员分组配置");
 
                 // 4. 删除该项目下的所有参赛人员
                 await _repository.DeleteByProjectIdAsync(projectId);

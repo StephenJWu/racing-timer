@@ -179,17 +179,17 @@ namespace Timer.Services
                 }
             }
 
-            // 检查号码布唯一性（如果提供了号码布）
-            if (!string.IsNullOrWhiteSpace(participant.BibNumber))
+            // 检查芯片外部号码唯一性（如果提供了芯片外部号码）
+            if (!string.IsNullOrWhiteSpace(participant.LabelNumber))
             {
-                var exists = await repository.ExistsByBibNumberAsync(participant.BibNumber);
+                var exists = await repository.ExistsByLabelNumberAsync(participant.LabelNumber);
                 if (exists)
                 {
                     // 如果是更新操作，需要检查是否是同一条记录
                     var existing = await repository.GetByIdAsync(participant.Id);
-                    if (existing == null || existing.BibNumber != participant.BibNumber)
+                    if (existing == null || existing.LabelNumber != participant.LabelNumber)
                     {
-                        result.AddError($"号码布编号'{participant.BibNumber}'已存在");
+                        result.AddError($"芯片外部号码'{participant.LabelNumber}'已存在");
                     }
                 }
             }

@@ -100,9 +100,10 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
-                          Height="400"
+                          Height="442"
                           RowHeight="40"
-                          ColumnHeaderHeight="40">
+                          ColumnHeaderHeight="40"
+                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
                     <!-- 单元格样式：垂直居中，左对齐 -->
                     <DataGrid.CellStyle>
                         <Style TargetType="DataGridCell">
@@ -192,7 +193,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="芯片外部号码" Binding="{Binding BibNumber}" Width="120">
+                        <DataGridTextColumn Header="芯片外部号码" Binding="{Binding LabelNumber}" Width="120">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>

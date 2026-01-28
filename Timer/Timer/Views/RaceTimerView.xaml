@@ -103,13 +103,15 @@
         </Style>
     </UserControl.Resources>
     
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <!-- 加载遮罩层 - 遮罩整个UserControl -->
+    <Grid>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- 顶部标题 -->
+            <!-- 顶部标题 -->
         <Border Grid.Row="0" 
                 Style="{StaticResource CardStyle}"
                 Margin="0,0,0,16">
@@ -189,24 +191,6 @@
                             Style="{StaticResource SmallActionButton}"/>
                 </StackPanel>
             </Grid>
-        </Border>
-
-        <!-- 加载指示器 -->
-        <Border Grid.Row="1"
-                Background="#fffbeb"
-                BorderBrush="#fde68a"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="⏳" FontSize="16" Margin="0,0,8,0"/>
-                <TextBlock Text="正在加载..." 
-                           FontSize="14"
-                           Foreground="#92400e"/>
-            </StackPanel>
         </Border>
 
         <!-- 空状态提示 -->
@@ -336,7 +320,6 @@
                                                 <TextBlock FontSize="12" 
                                                            Foreground="{StaticResource SecondaryTextColorBrush}"
                                                            Margin="0,4,0,0">
-                                                    <Run Text="芯片组:"/>
                                                     <Run Text="{Binding ChipGroupName}" FontWeight="Medium"/>
                                                     <Run Text=" · "/>
                                                     <Run Text="{Binding ParticipantCount}"/>
@@ -498,11 +481,12 @@
                                               CanUserSortColumns="True"
                                               CanUserReorderColumns="False"
                                               CanUserResizeColumns="True"
-                                              MaxHeight="300"
                                               RowHeight="40"
                                               ColumnHeaderHeight="40"
                                               BorderThickness="1"
-                                              BorderBrush="{StaticResource BorderColorBrush}">
+                                              BorderBrush="{StaticResource BorderColorBrush}"
+                                              ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <!-- 单元格样式：垂直居中，左对齐 -->
                                         <DataGrid.CellStyle>
                                             <Style TargetType="DataGridCell">
@@ -527,26 +511,12 @@
                                                 <Setter Property="Padding" Value="4,0"/>
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
-                                        <DataGrid.Columns>
-                                                <!-- 排名 -->
-                                                <DataGridTextColumn Header="排名" 
-                                                                    Binding="{Binding Rank}" 
-                                                                    Width="60"
-                                                                    IsReadOnly="True">
-                                                    <DataGridTextColumn.ElementStyle>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                                            <Setter Property="TextAlignment" Value="Left"/>
-                                                            <Setter Property="FontWeight" Value="Bold"/>
-                                                            <Setter Property="Foreground" Value="#6366f1"/>
-                                                        </Style>
-                                                    </DataGridTextColumn.ElementStyle>
-                                                </DataGridTextColumn>
-
+                                            <DataGrid.Columns>
                                                 <!-- 芯片外部号码 -->
                                                 <DataGridTextColumn Header="芯片外部号码" 
-                                                                    Binding="{Binding BibNumber}" 
-                                                                    Width="100"
+                                                                    Binding="{Binding LabelNumber}" 
+                                                                    Width="*"
+                                                                    MinWidth="120"
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
@@ -560,72 +530,72 @@
                                                 <!-- 姓名 -->
                                                 <DataGridTextColumn Header="姓名" 
                                                                     Binding="{Binding Name}" 
-                                                                    Width="90"
-                                                                    IsReadOnly="True">
-                                                    <DataGridTextColumn.ElementStyle>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                                            <Setter Property="TextAlignment" Value="Left"/>
-                                                        </Style>
-                                                    </DataGridTextColumn.ElementStyle>
-                                                </DataGridTextColumn>
-
-                                                <!-- 当前圈数 -->
-                                                <DataGridTextColumn Header="圈数" 
-                                                                    Binding="{Binding CurrentLap}" 
-                                                                    Width="60"
-                                                                    IsReadOnly="True">
-                                                    <DataGridTextColumn.ElementStyle>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                                            <Setter Property="TextAlignment" Value="Left"/>
-                                                        </Style>
-                                                    </DataGridTextColumn.ElementStyle>
-                                                </DataGridTextColumn>
-
-                                                <!-- 累计用时 -->
-                                                <DataGridTextColumn Header="累计用时" 
-                                                                    Binding="{Binding TotalTimeFormatted}" 
-                                                                    Width="110"
-                                                                    IsReadOnly="True">
-                                                    <DataGridTextColumn.ElementStyle>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                                            <Setter Property="TextAlignment" Value="Left"/>
-                                                            <Setter Property="FontFamily" Value="Consolas"/>
-                                                        </Style>
-                                                    </DataGridTextColumn.ElementStyle>
-                                                </DataGridTextColumn>
-
-                                                <!-- 最后一圈 -->
-                                                <DataGridTextColumn Header="末圈" 
-                                                                    Binding="{Binding LastLapTimeFormatted}" 
-                                                                    Width="110"
-                                                                    IsReadOnly="True">
-                                                    <DataGridTextColumn.ElementStyle>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                                            <Setter Property="TextAlignment" Value="Left"/>
-                                                            <Setter Property="FontFamily" Value="Consolas"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
-                                                        </Style>
-                                                    </DataGridTextColumn.ElementStyle>
-                                                </DataGridTextColumn>
-
-                                                <!-- 全部圈次成绩 -->
-                                                <DataGridTextColumn Header="各圈成绩" 
-                                                                    Binding="{Binding AllLapsFormatted}" 
                                                                     Width="*"
-                                                                    MinWidth="180"
+                                                                    MinWidth="100"
+                                                                    IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
+
+                                                <!-- 性别 -->
+                                                <DataGridTextColumn Header="性别" 
+                                                                    Binding="{Binding Gender}" 
+                                                                    Width="*"
+                                                                    MinWidth="60"
+                                                                    IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
+
+                                                <!-- 1圈计时 -->
+                                                <DataGridTextColumn Header="1圈计时" 
+                                                                    Binding="{Binding Lap1TimeFormatted}" 
+                                                                    Width="*"
+                                                                    MinWidth="110"
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="VerticalAlignment" Value="Center"/>
                                                             <Setter Property="TextAlignment" Value="Left"/>
                                                             <Setter Property="FontFamily" Value="Consolas"/>
-                                                            <Setter Property="FontSize" Value="11"/>
-                                                            <Setter Property="TextWrapping" Value="Wrap"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextColorBrush}"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
+
+                                                <!-- 2圈计时 -->
+                                                <DataGridTextColumn Header="2圈计时" 
+                                                                    Binding="{Binding Lap2TimeFormatted}" 
+                                                                    Width="*"
+                                                                    MinWidth="110"
+                                                                    IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
+                                                            <Setter Property="FontFamily" Value="Consolas"/>
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
+
+                                                <!-- 总计时 -->
+                                                <DataGridTextColumn Header="总计时" 
+                                                                    Binding="{Binding TotalTimeFormatted}" 
+                                                                    Width="*"
+                                                                    MinWidth="110"
+                                                                    IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="TextAlignment" Value="Left"/>
+                                                            <Setter Property="FontFamily" Value="Consolas"/>
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
@@ -633,7 +603,8 @@
                                                 <!-- 状态 -->
                                                 <DataGridTextColumn Header="状态" 
                                                                     Binding="{Binding Status}" 
-                                                                    Width="70"
+                                                                    Width="*"
+                                                                    MinWidth="80"
                                                                     IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="TextBlock">
@@ -653,6 +624,22 @@
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
+
+                                                <!-- 操作 -->
+                                                <DataGridTemplateColumn Header="操作" Width="*" MinWidth="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal" 
+                                                                        HorizontalAlignment="Left"
+                                                                        VerticalAlignment="Center">
+                                                                <Button Content="删除"
+                                                                        Style="{StaticResource TableDeleteButtonStyle}"
+                                                                        Command="{Binding DataContext.DeleteParticipantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                                             </DataGrid.Columns>
 
                                             <!-- 行样式：高亮领先者和已完成者 -->
@@ -676,5 +663,33 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+        </Grid>
+
+        <!-- 加载遮罩层 - 遮罩整个UserControl -->
+        <Border Background="#80000000" 
+                Panel.ZIndex="1000"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="White" 
+                    CornerRadius="8" 
+                    Padding="32,24"
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="#40000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="处理中..." 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextColorBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="请稍候" 
+                               FontSize="12" 
+                               Foreground="{StaticResource SecondaryTextColorBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

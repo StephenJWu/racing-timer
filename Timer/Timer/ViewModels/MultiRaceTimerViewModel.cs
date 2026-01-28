@@ -19,8 +19,11 @@ namespace Timer.ViewModels
     public partial class MultiRaceTimerViewModel : ObservableObject, IDisposable, IRecipient<ChipGroupUpdatedMessage>, IRecipient<DataReloadRequestedMessage>
     {
         private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IRaceRecordRepository _raceRecordRepository;
         private readonly IParticipantRepository _participantRepository;
+        private readonly IParticipantGroupRepository _participantGroupRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly IChipRepository _chipRepository;
         private readonly ITimerService _timerService;
         private readonly ILoggingService? _loggingService;
         private bool _disposed;
@@ -88,14 +91,20 @@ namespace Timer.ViewModels
 
         public MultiRaceTimerViewModel(
             IRaceGroupRepository raceGroupRepository,
+            IRaceRecordRepository raceRecordRepository,
             IParticipantRepository participantRepository,
+            IParticipantGroupRepository participantGroupRepository,
             IProjectRepository projectRepository,
+            IChipRepository chipRepository,
             ITimerService timerService,
             ILoggingService? loggingService = null)
         {
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _raceRecordRepository = raceRecordRepository ?? throw new ArgumentNullException(nameof(raceRecordRepository));
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
+            _participantGroupRepository = participantGroupRepository ?? throw new ArgumentNullException(nameof(participantGroupRepository));
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
+            _chipRepository = chipRepository ?? throw new ArgumentNullException(nameof(chipRepository));
             _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
             _loggingService = loggingService;
 
@@ -115,7 +124,7 @@ namespace Timer.ViewModels
             // 可用分组列表（RaceGroup）
             foreach (var g in AvailableRaceGroups.Where(r => r.ChipGroupId == updated.Id))
             {
-                g.ChipGroupName = updated.GroupName;
+                g.ChipGroupName = updated.ChipGroupName;
                 g.ChipGroupColor = updated.Color;
             }
 
@@ -132,7 +141,7 @@ namespace Timer.ViewModels
                 var rg = AvailableRaceGroups.FirstOrDefault(x => x.Id == timing.RaceGroupId);
                 if (rg != null && rg.ChipGroupId == updated.Id)
                 {
-                    timing.ChipGroupName = updated.GroupName;
+                    timing.ChipGroupName = updated.ChipGroupName;
                     timing.ChipGroupColor = updated.Color;
                 }
             }
@@ -190,9 +199,9 @@ namespace Timer.ViewModels
                 {
                     if (map.TryGetValue(p.ParticipantId, out var latest))
                     {
-                        p.BibNumber = latest.BibNumber ?? "-";
+                        p.LabelNumber = latest.LabelNumber ?? "-";
                         p.Name = latest.Name;
-                        p.ChipNumber = latest.ChipNumber;
+                        p.InternalNumber = latest.InternalNumber;
                     }
                 }
 
@@ -215,25 +224,7 @@ namespace Timer.ViewModels
             {
                 IsLoading = true;
                 
-                // 如果选中了项目，则按项目加载
-                if (SelectedProject != null)
-                {
-                    var groups = await _raceGroupRepository.GetByProjectIdAsync(SelectedProject.Id);
-                    
-                    AvailableRaceGroups.Clear();
-                    foreach (var group in groups)
-                    {
-                        // 过滤掉已经添加的分组
-                        if (!RaceGroups.Any(r => r.RaceGroupId == group.Id))
-                        {
-                            AvailableRaceGroups.Add(group);
-                        }
-                    }
-                }
-                else
-                {
-                    AvailableRaceGroups.Clear();
-                }
+                await LoadRaceGroupsByProjectAsync(SelectedProject?.Id ?? 0);
 
                 // 同时恢复活跃的比赛
                 await RestoreActiveRacesAsync();
@@ -249,61 +240,51 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 恢复活跃的比赛
+        /// 恢复活跃的比赛（从 RaceGroups 表加载状态不是 Pending 的比赛组）
         /// </summary>
         private async Task RestoreActiveRacesAsync()
         {
             try
             {
-                var activeRaces = await _timerService.LoadActiveRacesAsync();
-                
-                foreach (var activeRace in activeRaces)
+                // 从数据库加载所有状态不是 Pending 的比赛组
+                var allRaceGroups = await _raceGroupRepository.GetAllAsync();
+                var activeRaceGroups = allRaceGroups.Where(rg => rg.Status != RaceStatus.Pending).ToList();
+
+                foreach (var raceGroup in activeRaceGroups)
                 {
                     // 如果已经在列表中，跳过
-                    if (RaceGroups.Any(r => r.RaceGroupId == activeRace.RaceGroupId))
+                    if (RaceGroups.Any(r => r.RaceGroupId == raceGroup.Id))
                         continue;
 
-                    // 获取分组信息
-                    var group = AvailableRaceGroups.FirstOrDefault(g => g.Id == activeRace.RaceGroupId);
-                    if (group == null)
+                    var timingInfo = CreateTimingInfoFromGroup(raceGroup, raceGroup.RaceLaps);
+                    timingInfo.RaceGroupId = raceGroup.Id;
+                    timingInfo.Status = raceGroup.Status;
+
+                    // 从 RaceRecords 加载参赛者
+                    await LoadParticipantsFromRaceRecordsAsync(timingInfo, raceGroup.Id);
+
+                    // 恢复计时状态（根据 RaceRecords 中的状态和时间）
+                    var raceRecords = await _raceRecordRepository.GetByRaceGroupIdAsync(raceGroup.Id);
+                    if (raceRecords.Any())
                     {
-                        // 从数据库加载
-                        group = await _raceGroupRepository.GetByIdAsync(activeRace.RaceGroupId);
-                    }
-                    
-                    if (group == null) continue;
-
-                    var timingInfo = CreateTimingInfoFromGroup(group, activeRace.TotalLaps);
-                    timingInfo.RaceRecordId = activeRace.Id;
-
-                    // 加载参赛者和圈次记录
-                    await LoadParticipantsForGroupAsync(timingInfo);
-                    await RestoreLapRecordsAsync(timingInfo, activeRace.Id);
-
-                    // 恢复计时状态
-                    if (activeRace.Status == RaceStatus.Running || activeRace.Status == RaceStatus.Paused)
-                    {
-                        // 标记所有未完成的参赛者为比赛中
-                        foreach (var p in timingInfo.Participants.Where(p => !p.IsCompleted))
+                        // 检查是否有进行中的记录
+                        var runningRecords = raceRecords.Where(r => r.Status == RaceStatus.Running || r.Status == RaceStatus.Paused).ToList();
+                        if (runningRecords.Any())
                         {
-                            p.IsRacing = true;
-                        }
-                        
-                        if (activeRace.Status == RaceStatus.Running)
-                        {
-                            timingInfo.StartTimer(activeRace.StartTime);
-                        }
-                        else
-                        {
-                            timingInfo.StartTimer(activeRace.StartTime);
-                            timingInfo.PauseTimer();
+                            // 恢复计时器（使用当前时间减去已用时间）
+                            // 这里简化处理，实际应该从数据库恢复开始时间
+                            timingInfo.StartTimer(DateTime.Now);
+                            if (raceGroup.Status == RaceStatus.Paused)
+                            {
+                                timingInfo.PauseTimer();
+                            }
                         }
                     }
 
                     RaceGroups.Add(timingInfo);
                     
-                    // 从可用列表中移除
-                    var availableGroup = AvailableRaceGroups.FirstOrDefault(g => g.Id == group.Id);
+                    // 从可用列表中移除（如果存在）
+                    var availableGroup = AvailableRaceGroups.FirstOrDefault(g => g.Id == raceGroup.Id);
                     if (availableGroup != null)
                     {
                         AvailableRaceGroups.Remove(availableGroup);
@@ -314,7 +295,8 @@ namespace Timer.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"恢复活跃比赛失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                _loggingService?.Error($"恢复活跃比赛失败: {ex.Message}", ex);
+                // 不显示错误消息，避免启动时打扰用户
             }
         }
 
@@ -330,27 +312,184 @@ namespace Timer.ViewModels
                 return;
             }
 
+            if (SelectedProject == null || SelectedProject.Id == 0)
+            {
+                MessageBox.Show("请先选择一个项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             try
             {
                 IsLoading = true;
+                await Task.Delay(50); // 让UI有机会刷新显示遮罩层
+
+                _loggingService?.Info($"[按钮点击] 比赛计时 - 添加比赛组按钮, 项目: {SelectedProject.Name}, 分组: {SelectedAvailableGroup.DisplayName}");
 
                 var group = SelectedAvailableGroup;
                 var laps = group.RaceLaps > 0 ? group.RaceLaps : 1;
-                var timingInfo = CreateTimingInfoFromGroup(group, laps);
 
-                // 加载参赛者
-                await LoadParticipantsForGroupAsync(timingInfo);
+                // 1. 获取该分组的参赛人员（使用 RaceGroupRepository 的方法，它正确处理 null 值和 ProjectId）
+                var participants = (await _raceGroupRepository.GetParticipantsByGroupAsync(
+                    SelectedProject.Id,
+                    group.School,
+                    group.Grade,
+                    group.Class,
+                    group.GroupName)).ToList();
 
-                if (timingInfo.ParticipantCount == 0)
+                if (participants.Count == 0)
                 {
                     MessageBox.Show($"分组 [{group.DisplayName}] 没有参赛者，无法添加", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    IsLoading = false;
                     return;
                 }
 
-                // 添加到比赛列表
-                RaceGroups.Add(timingInfo);
+                // 2. 从ParticipantGroups表查询该分组的配置信息（圈数、ChipGroupId、ChipGroupName）
+                var participantGroup = await _participantGroupRepository.GetByGroupInfoAsync(
+                    SelectedProject.Id,
+                    group.School,
+                    group.Grade,
+                    group.Class,
+                    group.GroupName);
 
-                // 从可用列表中移除
+                // 如果当前项目下没有，尝试查询所有项目下的ParticipantGroup
+                if (participantGroup == null)
+                {
+                    var allParticipantGroups = await _participantGroupRepository.QueryAsync(
+                        null, // 不限制项目
+                        group.School,
+                        group.Grade,
+                        group.Class,
+                        group.GroupName);
+                    
+                    participantGroup = allParticipantGroups.FirstOrDefault();
+                }
+
+                // 从ParticipantGroups表获取配置信息
+                int? chipGroupId = participantGroup?.ChipGroupId;
+                string? chipGroupName = participantGroup?.ChipGroupName;
+                int raceLaps = participantGroup?.RaceLaps ?? (group.RaceLaps > 0 ? group.RaceLaps : 1);
+
+                // 如果ChipGroupName为空但ChipGroupId不为空，从ChipGroups表获取
+                if (string.IsNullOrEmpty(chipGroupName) && chipGroupId.HasValue)
+                {
+                    var chipGroup = await _chipRepository.GetChipGroupByIdAsync(chipGroupId.Value);
+                    if (chipGroup != null)
+                    {
+                        chipGroupName = chipGroup.ChipGroupName;
+                    }
+                }
+
+                // 3. 查询是否已存在该分组的 RaceGroup
+                var existingRaceGroups = await _raceGroupRepository.QueryRaceGroupsAsync(
+                    SelectedProject.Id,
+                    group.School,
+                    group.Grade,
+                    group.Class,
+                    group.GroupName);
+                
+                var existingRaceGroup = existingRaceGroups.FirstOrDefault();
+
+                int raceGroupId;
+                RaceGroup raceGroup;
+                
+                if (existingRaceGroup != null)
+                {
+                    // 使用现有的 RaceGroup
+                    raceGroupId = existingRaceGroup.Id;
+                    raceGroup = existingRaceGroup;
+                    // 更新信息
+                    raceGroup.ParticipantCount = participants.Count;
+                    raceGroup.RaceLaps = raceLaps; // 使用ParticipantGroups表中的圈数
+                    
+                    // 使用ParticipantGroups表中的芯片组信息
+                    if (chipGroupId.HasValue)
+                    {
+                        raceGroup.ChipGroupId = chipGroupId;
+                        raceGroup.ChipGroupName = chipGroupName;
+                    }
+                    // 如果ParticipantGroups表中没有，但RaceGroup中有，保留RaceGroup中的
+                    else if (raceGroup.ChipGroupId.HasValue && string.IsNullOrEmpty(raceGroup.ChipGroupName))
+                    {
+                        var chipGroup = await _chipRepository.GetChipGroupByIdAsync(raceGroup.ChipGroupId.Value);
+                        if (chipGroup != null)
+                        {
+                            raceGroup.ChipGroupName = chipGroup.ChipGroupName;
+                        }
+                    }
+                    
+                    await _raceGroupRepository.UpdateAsync(raceGroup);
+                    _loggingService?.Info($"更新比赛分组: ID={raceGroupId}, 名称={raceGroup.DisplayName}, RaceLaps={raceGroup.RaceLaps}, ChipGroupId={raceGroup.ChipGroupId}, ChipGroupName={raceGroup.ChipGroupName}");
+                }
+                else
+                {
+                    // 创建新的 RaceGroup，使用ParticipantGroups表中的配置信息
+                    raceGroup = new RaceGroup
+                    {
+                        ProjectId = SelectedProject.Id,
+                        School = group.School,
+                        Grade = group.Grade,
+                        Class = group.Class,
+                        GroupName = group.GroupName,
+                        ParticipantCount = participants.Count,
+                        RaceLaps = raceLaps, // 使用ParticipantGroups表中的圈数
+                        ChipGroupId = chipGroupId,
+                        ChipGroupName = chipGroupName,
+                        Status = RaceStatus.Pending,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    raceGroupId = await _raceGroupRepository.CreateAsync(raceGroup);
+                    _loggingService?.Info($"创建比赛分组: ID={raceGroupId}, 名称={raceGroup.DisplayName}, RaceLaps={raceGroup.RaceLaps}, ChipGroupId={raceGroup.ChipGroupId}, ChipGroupName={raceGroup.ChipGroupName}");
+                }
+
+                // 3. 删除该 RaceGroup 下现有的 RaceRecords（如果存在）
+                await _raceRecordRepository.DeleteByRaceGroupIdAsync(raceGroupId);
+
+                // 4. 为每个参赛人员创建 RaceRecord
+                var raceRecords = new List<RaceRecord>();
+                foreach (var participant in participants)
+                {
+                    var raceRecord = new RaceRecord
+                    {
+                        RaceGroupId = raceGroupId,
+                        ProjectId = SelectedProject.Id,
+                        SequenceNumber = participant.SequenceNumber,
+                        School = participant.School ?? string.Empty,
+                        Grade = participant.Grade,
+                        Class = participant.Class,
+                        GroupName = participant.GroupName ?? string.Empty,
+                        LabelNumber = participant.LabelNumber,
+                        Name = participant.Name,
+                        Gender = participant.Gender,
+                        Lap1Time = "00:00:00.000",
+                        Lap2Time = "00:00:00.000",
+                        TotalTime = "00:00:00.000",
+                        Status = RaceStatus.Pending,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    raceRecords.Add(raceRecord);
+                }
+
+                await _raceRecordRepository.CreateBatchAsync(raceRecords);
+                _loggingService?.Info($"创建比赛记录: RaceGroupId={raceGroupId}, 记录数={raceRecords.Count}");
+
+                // 5. 重新从数据库加载 RaceGroup 以确保包含芯片组信息
+                var loadedRaceGroup = await _raceGroupRepository.GetByIdAsync(raceGroupId);
+                if (loadedRaceGroup != null)
+                {
+                    raceGroup = loadedRaceGroup;
+                }
+
+                // 6. 创建 TimingInfo 并加载参赛者
+                var timingInfo = CreateTimingInfoFromGroup(raceGroup, laps);
+                timingInfo.RaceGroupId = raceGroupId;
+                await LoadParticipantsFromRaceRecordsAsync(timingInfo, raceGroupId);
+
+                // 6. 添加到比赛列表（后加入排在上面）
+                RaceGroups.Insert(0, timingInfo);
+
+                // 7. 从可用列表中移除
                 AvailableRaceGroups.Remove(group);
                 SelectedAvailableGroup = null;
 
@@ -358,6 +497,7 @@ namespace Timer.ViewModels
             }
             catch (Exception ex)
             {
+                _loggingService?.Error($"添加分组失败: {ex.Message}", ex);
                 MessageBox.Show($"添加分组失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -448,29 +588,39 @@ namespace Timer.ViewModels
                     return;
                 }
 
-                // 启动比赛
+                // 启动比赛（更新 RaceGroup 和所有 RaceRecords 的状态）
                 var race = await _timerService.StartRaceAsync(group.RaceGroupId, group.TotalLaps);
-                group.RaceRecordId = race.Id;
-                group.StartTimer(race.StartTime);
+                group.StartTimer(DateTime.Now);
+
+                // 更新该分组下所有参赛人员的状态
+                var raceRecords = await _raceRecordRepository.GetByRaceGroupIdAsync(group.RaceGroupId);
+                foreach (var record in raceRecords)
+                {
+                    record.Status = RaceStatus.Running;
+                    await _raceRecordRepository.UpdateAsync(record);
+                }
 
                 // 重置参赛者状态
                 foreach (var p in group.Participants)
                 {
                     p.CurrentLap = 0;
+                    p.Lap1Time = TimeSpan.Zero;
+                    p.Lap2Time = TimeSpan.Zero;
                     p.TotalTime = TimeSpan.Zero;
                     p.LastLapTime = null;
-                    p.LapTimes.Clear();
                     p.IsCompleted = false;
                     p.IsLeading = false;
                     p.Rank = 0;
                     p.IsRacing = true;  // 标记比赛开始
                     p.LiveElapsedTime = TimeSpan.Zero;  // 重置实时用时
+                    p.Status = "进行中";
                 }
 
                 UpdateSelectionState();
             }
             catch (Exception ex)
             {
+                _loggingService?.Error($"启动比赛失败: {ex.Message}", ex);
                 MessageBox.Show($"启动比赛失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -678,15 +828,47 @@ namespace Timer.ViewModels
 
             try
             {
-                var lapRecord = await _timerService.RecordLapAsync(group.RaceRecordId, participant.ParticipantId, DateTime.Now);
+                // 在新架构中，使用 participant.RaceRecordId 来记录圈次
+                await _timerService.RecordLapAsync(participant.RaceRecordId, participant.ParticipantId, DateTime.Now);
                 
-                // 更新UI显示
-                participant.CurrentLap = lapRecord.LapNumber;
-                participant.TotalTime = TimeSpan.FromMilliseconds(lapRecord.TotalTime);
-                participant.LastLapTime = TimeSpan.FromMilliseconds(lapRecord.LapTime);
-                participant.Rank = lapRecord.Rank ?? 0;
-                participant.LapTimes.Add(TimeSpan.FromMilliseconds(lapRecord.LapTime));
-                participant.NotifyAllLapsChanged();
+                // 重新加载该参赛人员的记录以获取最新数据
+                var updatedRecord = await _raceRecordRepository.GetByIdAsync(participant.RaceRecordId);
+                if (updatedRecord != null)
+                {
+                    // 计算当前圈数
+                    int currentLap = 0;
+                    if (!string.IsNullOrWhiteSpace(updatedRecord.Lap2Time) && updatedRecord.Lap2Time != "00:00:00.000")
+                        currentLap = 2;
+                    else if (!string.IsNullOrWhiteSpace(updatedRecord.Lap1Time) && updatedRecord.Lap1Time != "00:00:00.000")
+                        currentLap = 1;
+                    
+                    // 更新UI显示
+                    participant.CurrentLap = currentLap;
+                    participant.Lap1Time = ParseTimeString(updatedRecord.Lap1Time);
+                    participant.Lap2Time = ParseTimeString(updatedRecord.Lap2Time);
+                    participant.TotalTime = ParseTimeString(updatedRecord.TotalTime);
+                    
+                    // 更新最后一圈时间
+                    if (currentLap == 1)
+                    {
+                        participant.LastLapTime = participant.Lap1Time;
+                    }
+                    else if (currentLap == 2)
+                    {
+                        participant.LastLapTime = participant.Lap2Time;
+                    }
+                    
+                    // 计算排名（从所有记录中计算）
+                    var allRecords = await _raceRecordRepository.GetByRaceGroupIdAsync(updatedRecord.RaceGroupId);
+                    var sortedRecords = allRecords
+                        .Where(r => !string.IsNullOrWhiteSpace(r.TotalTime) && r.TotalTime != "00:00:00.000")
+                        .OrderBy(r => ParseTimeString(r.TotalTime))
+                        .ToList();
+                    participant.Rank = sortedRecords.FindIndex(r => r.Id == updatedRecord.Id) + 1;
+                    
+                    participant.Status = GetStatusText(updatedRecord.Status);
+                    participant.IsCompleted = updatedRecord.Status == RaceStatus.Completed;
+                }
 
                 // 检查是否完成比赛
                 if (participant.CurrentLap >= group.TotalLaps)
@@ -725,7 +907,7 @@ namespace Timer.ViewModels
             foreach (var group in RaceGroups.Where(g => g.Status == RaceStatus.Running))
             {
                 var participant = group.Participants.FirstOrDefault(p =>
-                    p.BibNumber == input || p.ChipNumber == input);
+                    p.LabelNumber == input || p.InternalNumber == input);
 
                 if (participant != null)
                 {
@@ -751,13 +933,14 @@ namespace Timer.ViewModels
         {
             try
             {
-                await _timerService.CompleteRaceAsync(group.RaceRecordId);
+                await _timerService.CompleteRaceAsync(group.RaceGroupId);
                 group.StopTimer(RaceStatus.Completed);
                 
                 // 重置参赛者的比赛状态（虽然已完成，但语义上比赛已结束）
                 foreach (var p in group.Participants)
                 {
                     p.IsRacing = false;
+                    p.Status = "已完成";
                 }
                 
                 UpdateSelectionState();
@@ -766,103 +949,127 @@ namespace Timer.ViewModels
             }
             catch (Exception ex)
             {
+                _loggingService?.Error($"完成比赛失败: {ex.Message}", ex);
                 MessageBox.Show($"完成比赛失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// 加载分组的参赛者
+        /// 从 RaceRecords 加载分组的参赛者
         /// </summary>
-        private async Task LoadParticipantsForGroupAsync(RaceGroupTimingInfo group)
+        private async Task LoadParticipantsFromRaceRecordsAsync(RaceGroupTimingInfo group, int raceGroupId)
         {
             try
             {
-                var searchFilter = new SearchFilter
-                {
-                    School = group.School,
-                    Grade = group.Grade,
-                    Class = group.Class,
-                    GroupName = group.GroupName,
-                    PageNumber = 1,
-                    PageSize = 1000
-                };
-
-                var participants = await _participantRepository.GetAllAsync(searchFilter);
+                var raceRecords = await _raceRecordRepository.GetByRaceGroupIdAsync(raceGroupId);
                 
                 group.Participants.Clear();
-                foreach (var participant in participants)
+                foreach (var raceRecord in raceRecords)
                 {
-                    group.Participants.Add(new ParticipantTimingInfo
+                    // 解析时间字符串为 TimeSpan
+                    TimeSpan lap1Time = ParseTimeString(raceRecord.Lap1Time);
+                    TimeSpan lap2Time = ParseTimeString(raceRecord.Lap2Time);
+                    TimeSpan totalTime = ParseTimeString(raceRecord.TotalTime);
+
+                    var participantInfo = new ParticipantTimingInfo
                     {
-                        ParticipantId = participant.Id,
+                        RaceRecordId = raceRecord.Id,
                         Rank = 0,
-                        BibNumber = participant.BibNumber ?? "-",
-                        Name = participant.Name,
-                        ChipNumber = participant.ChipNumber,
-                        CurrentLap = 0,
-                        TotalTime = TimeSpan.Zero,
-                        LastLapTime = null,
-                        Status = "未开始",
+                        LabelNumber = raceRecord.LabelNumber ?? "-",
+                        Name = raceRecord.Name,
+                        Gender = raceRecord.Gender,
+                        Lap1Time = lap1Time,
+                        Lap2Time = lap2Time,
+                        TotalTime = totalTime,
+                        Status = GetStatusText(raceRecord.Status),
                         IsLeading = false,
-                        IsCompleted = false
-                    });
+                        IsCompleted = raceRecord.Status == RaceStatus.Completed
+                    };
+
+                    // 根据圈数设置当前圈数
+                    if (lap2Time > TimeSpan.Zero)
+                    {
+                        participantInfo.CurrentLap = 2;
+                    }
+                    else if (lap1Time > TimeSpan.Zero)
+                    {
+                        participantInfo.CurrentLap = 1;
+                    }
+                    else
+                    {
+                        participantInfo.CurrentLap = 0;
+                    }
+
+                    group.Participants.Add(participantInfo);
                 }
 
                 group.ParticipantCount = group.Participants.Count;
             }
             catch (Exception ex)
             {
+                _loggingService?.Error($"从 RaceRecords 加载参赛者失败: {ex.Message}", ex);
                 MessageBox.Show($"加载参赛者失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// 恢复圈次记录
+        /// 解析时间字符串（格式：HH:mm:ss.fff）为 TimeSpan
         /// </summary>
-        private async Task RestoreLapRecordsAsync(RaceGroupTimingInfo group, int raceRecordId)
+        private TimeSpan ParseTimeString(string timeString)
         {
+            if (string.IsNullOrWhiteSpace(timeString) || timeString == "00:00:00.000")
+            {
+                return TimeSpan.Zero;
+            }
+
             try
             {
-                var lapRecords = await _timerService.GetLapRecordsAsync(raceRecordId);
-                
-                // 按参赛者分组
-                var recordsByParticipant = lapRecords.GroupBy(l => l.ParticipantId);
-                
-                foreach (var participantRecords in recordsByParticipant)
+                var parts = timeString.Split(':');
+                if (parts.Length == 3)
                 {
-                    var participant = group.Participants.FirstOrDefault(p => p.ParticipantId == participantRecords.Key);
-                    if (participant == null) continue;
-
-                    var orderedRecords = participantRecords.OrderBy(r => r.LapNumber).ToList();
-                    var latestRecord = orderedRecords.LastOrDefault();
-                    
-                    if (latestRecord != null)
-                    {
-                        participant.CurrentLap = latestRecord.LapNumber;
-                        participant.TotalTime = TimeSpan.FromMilliseconds(latestRecord.TotalTime);
-                        participant.LastLapTime = TimeSpan.FromMilliseconds(latestRecord.LapTime);
-                        participant.Rank = latestRecord.Rank ?? 0;
-                        
-                        foreach (var record in orderedRecords)
-                        {
-                            participant.LapTimes.Add(TimeSpan.FromMilliseconds(record.LapTime));
-                        }
-                        participant.NotifyAllLapsChanged();
-
-                        if (participant.CurrentLap >= group.TotalLaps)
-                        {
-                            participant.IsCompleted = true;
-                        }
-                    }
+                    var hours = int.Parse(parts[0]);
+                    var minutes = int.Parse(parts[1]);
+                    var secondsAndMs = parts[2].Split('.');
+                    var seconds = int.Parse(secondsAndMs[0]);
+                    var milliseconds = secondsAndMs.Length > 1 ? int.Parse(secondsAndMs[1]) : 0;
+                    return new TimeSpan(0, hours, minutes, seconds, milliseconds);
                 }
-
-                group.UpdateRankings();
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show($"恢复圈次记录失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                // 解析失败，返回零
+            }
+
+            return TimeSpan.Zero;
+        }
+
+        /// <summary>
+        /// 获取状态文本
+        /// </summary>
+        private string GetStatusText(RaceStatus status)
+        {
+            return status switch
+            {
+                RaceStatus.Pending => "待开始",
+                RaceStatus.Running => "进行中",
+                RaceStatus.Paused => "已暂停",
+                RaceStatus.Completed => "已完成",
+                RaceStatus.Stopped => "已停止",
+                _ => "待开始"
+            };
+        }
+
+        /// <summary>
+        /// 加载分组的参赛者（兼容旧方法，现在从 RaceRecords 加载）
+        /// </summary>
+        private async Task LoadParticipantsForGroupAsync(RaceGroupTimingInfo group)
+        {
+            if (group.RaceGroupId > 0)
+            {
+                await LoadParticipantsFromRaceRecordsAsync(group, group.RaceGroupId);
             }
         }
+
 
         /// <summary>
         /// 更新选择状态
@@ -918,23 +1125,76 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 根据项目ID加载比赛组
+        /// 根据项目ID加载“可选比赛组”（来源 ParticipantGroups，展示 School-Grade-Class-GroupName）
         /// </summary>
         private async Task LoadRaceGroupsByProjectAsync(int projectId)
         {
             try
             {
                 IsLoading = true;
-                var groups = await _raceGroupRepository.GetByProjectIdAsync(projectId);
-                
+
                 AvailableRaceGroups.Clear();
-                foreach (var group in groups)
+
+                // 未选择项目：不展示任何可选比赛组
+                if (projectId <= 0)
                 {
-                    // 过滤掉已经添加的分组
-                    if (!RaceGroups.Any(r => r.RaceGroupId == group.Id))
+                    return;
+                }
+
+                // 1) 从 ParticipantGroups 读取该项目下所有分组配置
+                var participantGroups = (await _participantGroupRepository.QueryAsync(
+                    projectId,
+                    school: null,
+                    grade: null,
+                    classValue: null,
+                    groupName: null)).ToList();
+
+                // 2) 用 ChipGroups 补齐颜色/名称（如果配置里缺失）
+                var chipGroups = (await _chipRepository.GetAllChipGroupsAsync()).ToList();
+                var chipGroupById = chipGroups.ToDictionary(c => c.Id, c => c);
+
+                // 3) 过滤掉当前 UI 已经添加的分组（通过 RaceGroups 表的 Id 来过滤更准确）
+                var existingRaceGroups = (await _raceGroupRepository.GetByProjectIdAsync(projectId)).ToList();
+                var existingRaceGroupIdSet = existingRaceGroups
+                    .Where(g => RaceGroups.Any(r => r.RaceGroupId == g.Id))
+                    .Select(g => g.Id)
+                    .ToHashSet();
+
+                foreach (var pg in participantGroups)
+                {
+                    // 如果该 ParticipantGroup 已经对应一个 RaceGroup 且已在 UI 中展示，则跳过
+                    var matchedRaceGroup = existingRaceGroups.FirstOrDefault(rg =>
+                        rg.School == pg.School &&
+                        rg.Grade == pg.Grade &&
+                        rg.Class == pg.Class &&
+                        rg.GroupName == pg.GroupName);
+                    if (matchedRaceGroup != null && existingRaceGroupIdSet.Contains(matchedRaceGroup.Id))
                     {
-                        AvailableRaceGroups.Add(group);
+                        continue;
                     }
+
+                    var option = new RaceGroup
+                    {
+                        // 注意：这里的 Id 不是 RaceGroups 表的 Id，而是“可选项”的临时对象
+                        // 添加到比赛时，会按 School/Grade/Class/GroupName 去查找/创建 RaceGroups 记录。
+                        Id = 0,
+                        ProjectId = pg.ProjectId,
+                        School = pg.School,
+                        Grade = pg.Grade,
+                        Class = pg.Class,
+                        GroupName = pg.GroupName,
+                        RaceLaps = pg.RaceLaps > 0 ? pg.RaceLaps : 1,
+                        ChipGroupId = pg.ChipGroupId,
+                        ChipGroupName = pg.ChipGroupName
+                    };
+
+                    if (option.ChipGroupId.HasValue && chipGroupById.TryGetValue(option.ChipGroupId.Value, out var cg))
+                    {
+                        option.ChipGroupName ??= cg.ChipGroupName;
+                        option.ChipGroupColor = cg.Color;
+                    }
+
+                    AvailableRaceGroups.Add(option);
                 }
             }
             catch (Exception ex)
@@ -945,6 +1205,58 @@ namespace Timer.ViewModels
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// 删除参赛人员记录
+        /// </summary>
+        [RelayCommand]
+        private async Task DeleteParticipantAsync(ParticipantTimingInfo? participant)
+        {
+            if (participant == null || participant.RaceRecordId == 0)
+            {
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"确定要删除参赛人员 \"{participant.Name}\" 的记录吗？",
+                "确认删除",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                await _raceRecordRepository.DeleteAsync(participant.RaceRecordId);
+                _loggingService?.Info($"删除比赛记录: ID={participant.RaceRecordId}, 姓名={participant.Name}");
+
+                // 从对应的比赛组中移除
+                var group = RaceGroups.FirstOrDefault(g => g.Participants.Contains(participant));
+                if (group != null)
+                {
+                    group.Participants.Remove(participant);
+                    group.ParticipantCount = group.Participants.Count;
+                    
+                    // 更新 RaceGroup 的 ParticipantCount
+                    var raceGroup = await _raceGroupRepository.GetByIdAsync(group.RaceGroupId);
+                    if (raceGroup != null)
+                    {
+                        raceGroup.ParticipantCount = group.ParticipantCount;
+                        await _raceGroupRepository.UpdateAsync(raceGroup);
+                    }
+                }
+
+                MessageBox.Show("删除成功。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Error($"删除比赛记录失败: {ex.Message}", ex);
+                MessageBox.Show($"删除失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

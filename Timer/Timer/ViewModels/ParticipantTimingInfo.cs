@@ -13,20 +13,46 @@ namespace Timer.ViewModels
         [ObservableProperty]
         private int _participantId;
 
+        /// <summary>
+        /// 比赛记录ID
+        /// </summary>
+        [ObservableProperty]
+        private int _raceRecordId;
+
         [ObservableProperty]
         private int _rank;
 
         [ObservableProperty]
-        private string _bibNumber = string.Empty;
+        private string _labelNumber = string.Empty;
 
         [ObservableProperty]
         private string _name = string.Empty;
 
+        /// <summary>
+        /// 性别
+        /// </summary>
         [ObservableProperty]
-        private string? _chipNumber;
+        private string _gender = string.Empty;
+
+        [ObservableProperty]
+        private string? _internalNumber;
 
         [ObservableProperty]
         private int _currentLap;
+
+        /// <summary>
+        /// 1圈计时
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(Lap1TimeFormatted))]
+        private TimeSpan _lap1Time;
+
+        /// <summary>
+        /// 2圈计时
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(Lap2TimeFormatted))]
+        private TimeSpan _lap2Time;
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(TotalTimeFormatted))]
@@ -78,6 +104,16 @@ namespace Timer.ViewModels
         /// 格式化显示的最后一圈用时
         /// </summary>
         public string LastLapTimeFormatted => _lastLapTime.HasValue ? FormatTimeSpan(_lastLapTime.Value) : "-";
+
+        /// <summary>
+        /// 格式化显示的1圈计时
+        /// </summary>
+        public string Lap1TimeFormatted => _lap1Time > TimeSpan.Zero ? FormatTimeSpan(_lap1Time) : "00:00:00.000";
+
+        /// <summary>
+        /// 格式化显示的2圈计时
+        /// </summary>
+        public string Lap2TimeFormatted => _lap2Time > TimeSpan.Zero ? FormatTimeSpan(_lap2Time) : "00:00:00.000";
 
         /// <summary>
         /// 所有圈次成绩的格式化显示（用于工具提示或详细视图）

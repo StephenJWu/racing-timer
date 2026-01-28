@@ -26,6 +26,7 @@ namespace Timer.ViewModels
         private readonly IParticipantRepository _participantRepository;
         private readonly IChipRepository _chipRepository;
         private readonly IRaceGroupRepository _raceGroupRepository;
+        private readonly IParticipantGroupRepository _participantGroupRepository;
         private readonly IProjectRepository _projectRepository;
         private readonly IRaceGroupExportService _exportService;
         private readonly ILoggingService? _loggingService;
@@ -50,6 +51,7 @@ namespace Timer.ViewModels
             IParticipantRepository participantRepository,
             IChipRepository chipRepository,
             IRaceGroupRepository raceGroupRepository,
+            IParticipantGroupRepository participantGroupRepository,
             IProjectRepository projectRepository,
             IRaceGroupExportService exportService,
             ILoggingService? loggingService = null)
@@ -57,6 +59,7 @@ namespace Timer.ViewModels
             _participantRepository = participantRepository ?? throw new ArgumentNullException(nameof(participantRepository));
             _chipRepository = chipRepository ?? throw new ArgumentNullException(nameof(chipRepository));
             _raceGroupRepository = raceGroupRepository ?? throw new ArgumentNullException(nameof(raceGroupRepository));
+            _participantGroupRepository = participantGroupRepository ?? throw new ArgumentNullException(nameof(participantGroupRepository));
             _projectRepository = projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
             _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
             _loggingService = loggingService;
@@ -103,7 +106,7 @@ namespace Timer.ViewModels
             var existingGroup = ChipGroups.FirstOrDefault(g => g.Id == updated.Id);
             if (existingGroup != null)
             {
-                existingGroup.GroupName = updated.GroupName;
+                existingGroup.ChipGroupName = updated.ChipGroupName;
                 existingGroup.Color = updated.Color;
                 existingGroup.UpdatedAt = updated.UpdatedAt;
             }
@@ -115,14 +118,14 @@ namespace Timer.ViewModels
             // 2) 刷新当前查询结果中的 RaceGroups 显示字段（颜色/名称）
             foreach (var rg in RaceGroups.Where(r => r.ChipGroupId == updated.Id))
             {
-                rg.ChipGroupName = updated.GroupName;
+                rg.ChipGroupName = updated.ChipGroupName;
                 rg.ChipGroupColor = updated.Color;
             }
 
             // 3) 如果当前选中分组也引用该芯片组，确保详情区也刷新（RaceGroup 已可通知）
             if (SelectedRaceGroup?.ChipGroupId == updated.Id)
             {
-                SelectedRaceGroup.ChipGroupName = updated.GroupName;
+                SelectedRaceGroup.ChipGroupName = updated.ChipGroupName;
                 SelectedRaceGroup.ChipGroupColor = updated.Color;
             }
         }
@@ -191,11 +194,8 @@ namespace Timer.ViewModels
                     OnPropertyChanged(nameof(SelectedClass));
                     OnPropertyChanged(nameof(SelectedGroup));
                     
-                    // 加载该项目下的学校列表
-                    if (value != null && value.Id > 0)
-                    {
-                        _ = LoadSchoolsByProjectAsync(value.Id);
-                    }
+                    // 加载该项目下的学校列表（如果选择的是"全部"，则加载所有学校的列表）
+                    _ = LoadSchoolsByProjectAsync(value?.Id ?? 0);
                 }
             }
         }
@@ -318,8 +318,33 @@ namespace Timer.ViewModels
                     ChipGroups.Add(chipGroup);
                 }
 
-                // 加载年级、班级、组别（因为学校默认是"全部"）
+                // 初始化学校下拉框，默认选择"全部"
+                await LoadSchoolsByProjectAsync(0); // 0 表示全部项目
+
+                // 初始化年级、班级、组别下拉框，默认选择"全部"
                 await LoadGradesAsync(null);
+                await LoadClassesAsync(null, null);
+                await LoadGroupsAsync(null, null, null);
+
+                // 确保所有下拉框默认选择"全部"
+                _selectedSchool = AllOption;
+                _selectedGrade = AllOption;
+                _selectedClass = AllOption;
+                _selectedGroup = AllOption;
+                OnPropertyChanged(nameof(SelectedSchool));
+                OnPropertyChanged(nameof(SelectedGrade));
+                OnPropertyChanged(nameof(SelectedClass));
+                OnPropertyChanged(nameof(SelectedGroup));
+
+                // 确保项目选择为"全部"（如果还没有设置）
+                if (_selectedProject == null)
+                {
+                    _selectedProject = Projects.FirstOrDefault(p => p.Id == 0);
+                    OnPropertyChanged(nameof(SelectedProject));
+                }
+
+                // 默认查询所有分组信息（项目=全部，即 projectId = null）
+                await QueryAsync();
             }
             catch (Exception ex)
             {
@@ -365,7 +390,8 @@ namespace Timer.ViewModels
         {
             try
             {
-                var schools = await _participantRepository.GetDistinctSchoolsByProjectAsync(projectId);
+                int? projectIdNullable = projectId > 0 ? projectId : null;
+                var schools = await _participantGroupRepository.GetDistinctSchoolsByProjectAsync(projectIdNullable);
                 Schools.Clear();
                 Schools.Add(AllOption);
                 foreach (var school in schools)
@@ -388,7 +414,7 @@ namespace Timer.ViewModels
         {
             try
             {
-                var grades = await _participantRepository.GetDistinctGradesAsync(school);
+                var grades = await _participantGroupRepository.GetDistinctGradesAsync(school);
                 Grades.Clear();
                 Grades.Add(AllOption);
                 foreach (var grade in grades)
@@ -442,7 +468,7 @@ namespace Timer.ViewModels
         {
             try
             {
-                var groups = await _participantRepository.GetDistinctGroupNamesAsync(school, grade, classValue);
+                var groups = await _participantGroupRepository.GetDistinctGroupNamesAsync(school, grade, classValue);
                 Groups.Clear();
                 Groups.Add(AllOption);
                 foreach (var group in groups)
@@ -522,7 +548,8 @@ namespace Timer.ViewModels
         {
             _loggingService?.Info("[按钮点击] 人员分组 - 查询按钮");
             var projectId = (SelectedProject == null || SelectedProject.Id == 0) ? (int?)null : SelectedProject.Id;
-            _loggingService?.Debug($"[查询条件] ProjectId={projectId}, School={SelectedSchool}, Grade={SelectedGrade}, Class={SelectedClass}, GroupName={SelectedGroup}");
+            var projectDisplay = (SelectedProject == null || SelectedProject.Id == 0) ? "全部" : SelectedProject.Name;
+            _loggingService?.Debug($"[查询条件] 项目={projectDisplay}, 学校={SelectedSchool ?? AllOption}, 年级={SelectedGrade ?? AllOption}, 班级={SelectedClass ?? AllOption}, 组别={SelectedGroup ?? AllOption}");
             try
             {
                 IsLoading = true;
@@ -534,7 +561,8 @@ namespace Timer.ViewModels
                 var classValue = (SelectedClass == AllOption) ? null : SelectedClass;
                 var groupName = (SelectedGroup == AllOption) ? null : SelectedGroup;
 
-                var raceGroups = await _raceGroupRepository.QueryRaceGroupsAsync(
+                // 直接查询ParticipantGroups表
+                var participantGroups = await _participantGroupRepository.QueryAsync(
                     projectId,
                     school,
                     grade,
@@ -542,8 +570,58 @@ namespace Timer.ViewModels
                     groupName);
 
                 RaceGroups.Clear();
-                foreach (var raceGroup in raceGroups)
+                foreach (var participantGroup in participantGroups)
                 {
+                    // 将ParticipantGroup转换为RaceGroup用于显示
+                    var raceGroup = new RaceGroup
+                    {
+                        Id = participantGroup.Id, // 使用ParticipantGroup的ID
+                        ProjectId = participantGroup.ProjectId,
+                        School = participantGroup.School,
+                        Grade = participantGroup.Grade,
+                        Class = participantGroup.Class,
+                        GroupName = participantGroup.GroupName,
+                        RaceLaps = participantGroup.RaceLaps,
+                        ChipGroupId = participantGroup.ChipGroupId,
+                        ChipGroupName = participantGroup.ChipGroupName,
+                        Status = RaceStatus.Pending, // 默认状态
+                        CreatedAt = participantGroup.CreatedAt,
+                        UpdatedAt = participantGroup.UpdatedAt
+                    };
+
+                    // 获取该分组的人员数量
+                    try
+                    {
+                        var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
+                            participantGroup.ProjectId,
+                            participantGroup.School,
+                            participantGroup.Grade,
+                            participantGroup.Class,
+                            participantGroup.GroupName);
+                        raceGroup.ParticipantCount = participants.Count();
+                    }
+                    catch
+                    {
+                        raceGroup.ParticipantCount = 0;
+                    }
+
+                    // 如果芯片组ID不为空，获取芯片组颜色
+                    if (participantGroup.ChipGroupId.HasValue)
+                    {
+                        try
+                        {
+                            var chipGroup = await _chipRepository.GetChipGroupByIdAsync(participantGroup.ChipGroupId.Value);
+                            if (chipGroup != null)
+                            {
+                                raceGroup.ChipGroupColor = chipGroup.Color;
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略错误
+                        }
+                    }
+
                     RaceGroups.Add(raceGroup);
                 }
 
@@ -574,6 +652,7 @@ namespace Timer.ViewModels
             {
                 // 加载分组内的参赛人员
                 var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
+                    raceGroup.ProjectId,
                     raceGroup.School,
                     raceGroup.Grade,
                     raceGroup.Class,
@@ -613,25 +692,104 @@ namespace Timer.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    // 更新数据库中的配置（芯片组 + 圈数）
-                    await _raceGroupRepository.UpdateRaceGroupSettingsAsync(
-                        raceGroup.Id,
-                        raceGroup.ChipGroupId!.Value,
-                        raceGroup.RaceLaps);
+                    // 获取或创建ParticipantGroup配置
+                    var participantGroup = await _participantGroupRepository.GetOrCreateAsync(
+                        raceGroup.ProjectId,
+                        raceGroup.School,
+                        raceGroup.Grade,
+                        raceGroup.Class,
+                        raceGroup.GroupName);
+
+                    // 更新ParticipantGroups表中的配置（芯片组 + 圈数）
+                    participantGroup.RaceLaps = raceGroup.RaceLaps;
+                    participantGroup.ChipGroupId = raceGroup.ChipGroupId;
+                    
+                    // 获取芯片组名称
+                    if (raceGroup.ChipGroupId.HasValue)
+                    {
+                        var chipGroup = await _chipRepository.GetChipGroupByIdAsync(raceGroup.ChipGroupId.Value);
+                        if (chipGroup != null)
+                        {
+                            participantGroup.ChipGroupName = chipGroup.ChipGroupName;
+                        }
+                    }
+                    else
+                    {
+                        participantGroup.ChipGroupName = null;
+                    }
+
+                    participantGroup.UpdatedAt = DateTime.Now;
+                    await _participantGroupRepository.UpdateAsync(participantGroup);
 
                     // 为分组内人员分配芯片
-                    var assignedCount = await _raceGroupRepository.AssignChipsToParticipantsAsync(
-                        raceGroup.Id,
-                        raceGroup.ChipGroupId.Value);
+                    // 先查找或创建对应的RaceGroup（用于芯片分配）
+                    var existingRaceGroups = await _raceGroupRepository.QueryRaceGroupsAsync(
+                        raceGroup.ProjectId,
+                        raceGroup.School,
+                        raceGroup.Grade,
+                        raceGroup.Class,
+                        raceGroup.GroupName);
+                    var existingRaceGroup = existingRaceGroups.FirstOrDefault();
+                    
+                    int assignedCount = 0;
+                    if (raceGroup.ChipGroupId.HasValue)
+                    {
+                        if (existingRaceGroup != null)
+                        {
+                            // 使用现有的RaceGroup进行芯片分配
+                            assignedCount = await _raceGroupRepository.AssignChipsToParticipantsAsync(
+                                existingRaceGroup.Id,
+                                raceGroup.ChipGroupId.Value);
+                        }
+                        else
+                        {
+                            // 如果没有RaceGroup，直接通过分组信息分配芯片
+                            // 获取分组内的所有参赛人员
+                            var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
+                                raceGroup.ProjectId,
+                                raceGroup.School,
+                                raceGroup.Grade,
+                                raceGroup.Class,
+                                raceGroup.GroupName);
+                            
+                            if (participants.Any())
+                            {
+                                // 获取芯片组的所有芯片
+                                var chips = await _chipRepository.GetChipsByGroupIdAsync(raceGroup.ChipGroupId.Value);
+                                var chipList = chips.OrderBy(c => int.TryParse(c.LabelNumber, out var num) ? num : int.MaxValue).ToList();
+                                
+                                if (chipList.Count >= participants.Count())
+                                {
+                                    // 为每个参赛人员分配芯片
+                                    var participantList = participants.OrderBy(p => p.SequenceNumber).ToList();
+                                    for (int i = 0; i < participantList.Count && i < chipList.Count; i++)
+                                    {
+                                        var participant = participantList[i];
+                                        var chip = chipList[i];
+                                        participant.LabelNumber = chip.LabelNumber;
+                                        participant.InternalNumber = chip.InternalNumber;
+                                        participant.UpdatedAt = DateTime.Now;
+                                        await _participantRepository.UpdateAsync(participant);
+                                    }
+                                    assignedCount = Math.Min(participantList.Count, chipList.Count);
+                                }
+                                else
+                                {
+                                    throw new InvalidOperationException(
+                                        $"芯片数量不足：需要 {participants.Count()} 个芯片，但芯片组中只有 {chipList.Count} 个芯片");
+                                }
+                            }
+                        }
+                    }
 
                     _loggingService?.Info($"成功为 {assignedCount} 名参赛人员分配芯片");
 
                     // 更新分组的芯片组信息显示
-                    var chipGroup = ChipGroups.FirstOrDefault(cg => cg.Id == raceGroup.ChipGroupId.Value);
-                    if (chipGroup != null)
+                    var chipGroupForDisplay = ChipGroups.FirstOrDefault(cg => cg.Id == raceGroup.ChipGroupId.Value);
+                    if (chipGroupForDisplay != null)
                     {
-                        raceGroup.ChipGroupName = chipGroup.GroupName;
-                        raceGroup.ChipGroupColor = chipGroup.Color;
+                        raceGroup.ChipGroupName = chipGroupForDisplay.ChipGroupName;
+                        raceGroup.ChipGroupColor = chipGroupForDisplay.Color;
                     }
 
                     // 刷新人员详情（如果当前选中的是该分组）
@@ -679,8 +837,9 @@ namespace Timer.ViewModels
             {
                 try
                 {
-                    // 这里应该调用 Repository 的删除方法，但当前接口中没有定义
-                    // 暂时不实现实际删除，只从列表中移除
+                    // 删除ParticipantGroup配置
+                    await _participantGroupRepository.DeleteAsync(raceGroup.Id);
+                    
                     RaceGroups.Remove(raceGroup);
 
                     if (SelectedRaceGroup?.Id == raceGroup.Id)
@@ -824,6 +983,7 @@ namespace Timer.ViewModels
                         foreach (var raceGroup in RaceGroups)
                         {
                             var participants = await _raceGroupRepository.GetParticipantsByGroupAsync(
+                                raceGroup.ProjectId,
                                 raceGroup.School,
                                 raceGroup.Grade,
                                 raceGroup.Class,

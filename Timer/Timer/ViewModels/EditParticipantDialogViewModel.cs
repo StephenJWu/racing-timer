@@ -15,8 +15,9 @@ namespace Timer.ViewModels
         private readonly IParticipantRepository _repository;
         private readonly ILoggingService? _loggingService;
         private readonly string? _originalExamNumber;
-        private readonly string? _originalBibNumber;
+        private readonly string? _originalLabelNumber;
         private readonly int? _projectId;
+        private readonly int? _participantGroupId;
 
         private DateTime _date;
         private string? _school;
@@ -26,8 +27,8 @@ namespace Timer.ViewModels
         private string _gender = string.Empty;
         private string? _examNumber;
         private string? _groupName;
-        private string? _bibNumber;
-        private string? _chipNumber;
+        private string? _labelNumber;
+        private string? _internalNumber;
 
         /// <summary>
         /// 初始化编辑对话框ViewModel
@@ -41,6 +42,7 @@ namespace Timer.ViewModels
             Id = participant.Id;
             SequenceNumber = participant.SequenceNumber;
             _projectId = participant.ProjectId;
+            _participantGroupId = participant.ParticipantGroupId;
 
             Date = participant.Date;
             School = participant.School;
@@ -50,11 +52,11 @@ namespace Timer.ViewModels
             Gender = participant.Gender;
             ExamNumber = participant.ExamNumber;
             GroupName = participant.GroupName;
-            BibNumber = participant.BibNumber;
-            ChipNumber = participant.ChipNumber;
+            LabelNumber = participant.LabelNumber;
+            InternalNumber = participant.InternalNumber;
 
             _originalExamNumber = participant.ExamNumber;
-            _originalBibNumber = participant.BibNumber;
+            _originalLabelNumber = participant.LabelNumber;
 
             GenderOptions = new ObservableCollection<string> { "男", "女" };
             ValidationErrors = new ObservableCollection<string>();
@@ -158,21 +160,21 @@ namespace Timer.ViewModels
         }
 
         /// <summary>
-        /// 号码布（可选；若用户修改，则需要保持唯一）
+        /// 芯片外部号码（可选；若用户修改，则需要保持唯一）
         /// </summary>
-        public string? BibNumber
+        public string? LabelNumber
         {
-            get => _bibNumber;
-            set => SetProperty(ref _bibNumber, value);
+            get => _labelNumber;
+            set => SetProperty(ref _labelNumber, value);
         }
 
         /// <summary>
-        /// 芯片编号
+        /// 芯片内部号码
         /// </summary>
-        public string? ChipNumber
+        public string? InternalNumber
         {
-            get => _chipNumber;
-            set => SetProperty(ref _chipNumber, value);
+            get => _internalNumber;
+            set => SetProperty(ref _internalNumber, value);
         }
 
         /// <summary>
@@ -183,6 +185,10 @@ namespace Timer.ViewModels
             return new Participant
             {
                 Id = Id,
+                // 关键：编辑窗口不会让用户修改所属项目/分组，但 UpdateAsync 会写回这两列；
+                // 若不带回去，会把数据库中的 ProjectId / ParticipantGroupId 覆盖为 NULL。
+                ProjectId = _projectId,
+                ParticipantGroupId = _participantGroupId,
                 SequenceNumber = SequenceNumber,
                 Date = Date,
                 School = School,
@@ -192,8 +198,8 @@ namespace Timer.ViewModels
                 Gender = Gender?.Trim() ?? string.Empty,
                 ExamNumber = string.IsNullOrWhiteSpace(ExamNumber) ? null : ExamNumber.Trim(),
                 GroupName = string.IsNullOrWhiteSpace(GroupName) ? null : GroupName.Trim(),
-                BibNumber = string.IsNullOrWhiteSpace(BibNumber) ? null : BibNumber.Trim(),
-                ChipNumber = string.IsNullOrWhiteSpace(ChipNumber) ? null : ChipNumber.Trim()
+                LabelNumber = string.IsNullOrWhiteSpace(LabelNumber) ? null : LabelNumber.Trim(),
+                InternalNumber = string.IsNullOrWhiteSpace(InternalNumber) ? null : InternalNumber.Trim()
             };
         }
 
@@ -240,20 +246,20 @@ namespace Timer.ViewModels
                 }
             }
 
-            var bib = string.IsNullOrWhiteSpace(BibNumber) ? null : BibNumber.Trim();
-            if (!string.IsNullOrWhiteSpace(bib) && !string.Equals(bib, _originalBibNumber, StringComparison.Ordinal))
+            var label = string.IsNullOrWhiteSpace(LabelNumber) ? null : LabelNumber.Trim();
+            if (!string.IsNullOrWhiteSpace(label) && !string.Equals(label, _originalLabelNumber, StringComparison.Ordinal))
             {
                 try
                 {
-                    if (await _repository.ExistsByBibNumberAsync(bib))
+                    if (await _repository.ExistsByLabelNumberAsync(label))
                     {
-                        ValidationErrors.Add($"号码布\"{bib}\"已存在");
+                        ValidationErrors.Add($"芯片外部号码\"{label}\"已存在");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _loggingService?.Error($"校验号码布唯一性失败: {ex.Message}", ex);
-                    ValidationErrors.Add("号码布校验失败，请稍后重试");
+                    _loggingService?.Error($"校验芯片外部号码唯一性失败: {ex.Message}", ex);
+                    ValidationErrors.Add("芯片外部号码校验失败，请稍后重试");
                 }
             }
 
